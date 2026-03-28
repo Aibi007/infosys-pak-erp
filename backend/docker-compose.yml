@@ -1,0 +1,182 @@
+# ================================================================
+# docker-compose.yml — Infosys Pak ERP Full Stack
+#
+# Services:
+#   postgres  — PostgreSQL 15 (schema-per-tenant)
+#   api       — Node.js Express API (x2 replicas behind nginx)
+#   nginx     — Reverse proxy + SSL termination + static files
+#
+# Usage:
+#   cp .env.example .env          # fill in secrets
+#   docker compose up -d          # start all services
+#   docker compose logs -f api    # follow API logs
+#   docker compose exec api node migrate.js --status
+# ================================================================
+
+version: '3.9'
+
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: erp_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-infosys_pak}
+      POSTGRES_USER:     ${DB_USER:-erp_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGDATA:            /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./scripts/init-postgres.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    ports:
+      - "${DB_PORT_EXPOSE:-5432}:5432"   # expose only in dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-erp_app} -d ${DB_NAME:-infosys_pak}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - erp_internal
+    shm_size: 256mb
+    command: >
+      postgres
+        -c max_connections=200
+        -c shared_buffers=256MB
+        -c effective_cache_size=512MB
+        -c work_mem=16MB
+        -c wal_buffers=16MB
+        -c checkpoint_completion_target=0.9
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c log_min_duration_statement=1000
+        -c log_line_prefix='%t [%p]: [%l-1] db=%d,user=%u '
+
+  # ── API (can scale: docker compose up --scale api=2) ─────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: erp_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV:           production
+      PORT:               4000
+      API_PREFIX:         /api/v1
+
+      DB_HOST:            postgres
+      DB_PORT:            5432
+      DB_NAME:            ${DB_NAME:-infosys_pak}
+      DB_USER:            ${DB_USER:-erp_app}
+      DB_PASSWORD:        ${DB_PASSWORD}
+      DB_POOL_MIN:        2
+      DB_POOL_MAX:        20
+      DB_SSL:             false
+
+      JWT_SECRET:         ${JWT_SECRET}
+      JWT_ACCESS_EXPIRES: ${JWT_ACCESS_EXPIRES:-15m}
+      JWT_REFRESH_EXPIRES:${JWT_REFRESH_EXPIRES:-30d}
+      BCRYPT_ROUNDS:      ${BCRYPT_ROUNDS:-12}
+
+      CORS_ORIGIN:        ${CORS_ORIGIN:-https://app.erp.pk}
+      LOG_LEVEL:          ${LOG_LEVEL:-info}
+
+      FBR_API_URL:        ${FBR_API_URL:-https://esp.fbr.gov.pk:8244/ESP/api}
+      FBR_TIMEOUT_MS:     ${FBR_TIMEOUT_MS:-10000}
+
+      RATE_LIMIT_AUTH_MAX:${RATE_LIMIT_AUTH_MAX:-10}
+      RATE_LIMIT_API_MAX: ${RATE_LIMIT_API_MAX:-200}
+    volumes:
+      - api_logs:/app/logs
+      - api_uploads:/app/uploads
+    networks:
+      - erp_internal
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health | grep -q healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ── Nginx reverse proxy ───────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: erp_nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - erp_internal
+      - erp_external
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── DB backup job (runs daily at 2am PKT) ─────────────────────
+  backup:
+    image: postgres:15-alpine
+    container_name: erp_backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD:  ${DB_PASSWORD}
+      DB_HOST:     postgres
+      DB_USER:     ${DB_USER:-erp_app}
+      DB_NAME:     ${DB_NAME:-infosys_pak}
+      BACKUP_KEEP: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - ./scripts/backup.sh:/backup.sh:ro
+      - db_backups:/backups
+    networks:
+      - erp_internal
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "apk add --no-cache dcron &&
+       echo '0 21 * * * /backup.sh >> /var/log/backup.log 2>&1' | crontab - &&
+       crond -f -l 8"
+
+# ── Volumes ───────────────────────────────────────────────────
+volumes:
+  pg_data:
+    driver: local
+  api_logs:
+    driver: local
+  api_uploads:
+    driver: local
+  nginx_logs:
+    driver: local
+  db_backups:
+    driver: local
+
+# ── Networks ──────────────────────────────────────────────────
+networks:
+  erp_internal:
+    driver: bridge
+    internal: true          # no direct internet access for DB / API
+  erp_external:
+    driver: bridge          # nginx only talks to external

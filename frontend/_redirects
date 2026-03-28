@@ -1,0 +1,14 @@
+# Cloudflare Pages build configuration
+# This file tells Cloudflare how to build your frontend
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

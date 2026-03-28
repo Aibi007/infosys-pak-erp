@@ -1,0 +1,38 @@
+# ================================================================
+# docker-compose.dev.yml — Development overrides
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ================================================================
+
+version: '3.9'
+
+services:
+
+  postgres:
+    ports:
+      - "5432:5432"     # expose DB directly in dev
+
+  api:
+    build:
+      target: deps       # use deps stage (no copy, mount source)
+    command: ["node_modules/.bin/nodemon", "src/server.js"]
+    environment:
+      NODE_ENV:  development
+      LOG_LEVEL: debug
+      CORS_ORIGIN: "*"
+      BCRYPT_ROUNDS: "4"        # faster logins in dev
+      RATE_LIMIT_AUTH_MAX: "100"
+      RATE_LIMIT_API_MAX:  "1000"
+    volumes:
+      - .:/app                  # live source mount
+      - /app/node_modules       # prevent overwriting node_modules
+    ports:
+      - "4000:4000"             # expose directly (bypass nginx in dev)
+      - "9229:9229"             # Node inspector
+
+  nginx:
+    profiles:
+      - prod                    # skip nginx in dev
+
+  backup:
+    profiles:
+      - prod                    # skip backup in dev
