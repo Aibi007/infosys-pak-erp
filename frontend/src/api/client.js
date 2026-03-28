@@ -41,11 +41,10 @@ export const tokenStore = {
 // ── Axios instance ────────────────────────────────────────────
 const api = axios.create({
   baseURL: BASE_URL,
-  baseURL: BASE_URL,
-headers: { 
-  'content-type': 'application/json',
-  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-},
+  headers: { 
+    'Content-Type': 'application/json',
+    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+  },
   timeout: 30_000,
 });
 
@@ -54,7 +53,11 @@ api.interceptors.request.use(
   (config) => {
     const token  = tokenStore.getAccess();
     const tenant = tokenStore.getTenant();
-    if (token)  config.headers['Authorization'] = `Bearer ${token}`;
+    const anon   = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+    // Supabase requires apikey header always
+    config.headers['apikey'] = anon;
+    // Use user JWT if logged in, otherwise use anon key
+    config.headers['Authorization'] = token ? `Bearer ${token}` : `Bearer ${anon}`;
     if (tenant) config.headers['X-Tenant-Slug'] = tenant;
     return config;
   },
