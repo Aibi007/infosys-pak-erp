@@ -10,7 +10,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import LoginScreen from './components/LoginScreen';
 
 // Lazy-load the main app shell to reduce initial bundle size
-const AppShell = React.lazy(() => import('./AppShell'));
+const AppShell = React.lazy(() => import('./pages/AppShell'));
 
 function Root() {
   const { isLoggedIn, loading } = useAuth();
