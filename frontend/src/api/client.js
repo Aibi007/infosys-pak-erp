@@ -41,7 +41,11 @@ export const tokenStore = {
 // ── Axios instance ────────────────────────────────────────────
 const api = axios.create({
   baseURL: BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
+  baseURL: BASE_URL,
+headers: { 
+  'content-type': 'application/json',
+  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+},
   timeout: 30_000,
 });
 
