@@ -78,13 +78,15 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
 
   try {
     // 1. Find user
-    const user = await publicDb.queryOne(
-      `SELECT id, email, password_hash, full_name, full_name_ur,
-              is_super_admin, is_active, tenant_id,
-              login_attempts, locked_until
-       FROM users WHERE email = $1`,
-      [email.toLowerCase()]
-    );
+   // Line 81-86 ke qareeb:
+const user = await publicDb.queryOne(
+  `SELECT id, email, password_hash, full_name, full_name_ur,
+          is_super_admin, is_active, tenant_id,
+          login_attempts, locked_until
+   FROM users WHERE email = ?`, // Yahan $1 ki jagah ? kar dein
+  [email.toLowerCase()]
+);
+
 
     // Timing-safe: always run bcrypt to prevent user enumeration
     const dummyHash = '$2a$12$invalidhashinvalidhashinvalidhashin';
