@@ -45,8 +45,21 @@ const baseConfig = {
   debug: process.env.NODE_ENV === 'development',
 };
 
+// Helper to patch knex instances with legacy raw query methods
+function patchDb(k) {
+  k.query = async (text, params) => {
+    const res = await k.raw(text, params || []);
+    return res.rows;
+  };
+  k.queryOne = async (text, params) => {
+    const res = await k.raw(text, params || []);
+    return res.rows[0];
+  };
+  return k;
+}
+
 // Root connection (public schema) — for tenant management
-const db = knex(baseConfig);
+const db = patchDb(knex(baseConfig));
 
 // ── Multi-tenant connection factory ─────────────────────────────
 // Returns a Knex instance scoped to a specific tenant's schema
@@ -61,7 +74,7 @@ function getTenantDb(tenantSlug) {
     return tenantConnections.get(sanitised);
   }
 
-  const tenantDb = knex({
+  const tenantDb = patchDb(knex({
     ...baseConfig,
     // Knex searchPath sets the PostgreSQL search_path per connection
     searchPath: [sanitised, 'public'],
@@ -74,7 +87,7 @@ function getTenantDb(tenantSlug) {
         );
       },
     },
-  });
+  }));
 
   tenantConnections.set(sanitised, tenantDb);
   logger.debug(`Tenant DB connection created for schema: ${sanitised}`);
@@ -102,4 +115,12 @@ async function destroyConnections() {
   logger.info('Database connections closed');
 }
 
-module.exports = { db, getTenantDb, checkConnection, destroyConnections, baseConfig };
+module.exports = { 
+  db, 
+  publicDb: db, 
+  getTenantDb, 
+  getTenantDB: getTenantDb, 
+  checkConnection, 
+  destroyConnections, 
+  baseConfig 
+};
