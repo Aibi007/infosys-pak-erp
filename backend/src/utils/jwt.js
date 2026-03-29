@@ -11,11 +11,13 @@ const ACCESS_SECRET  = process.env.JWT_SECRET;
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES  || '15m';
 const REFRESH_EXPIRES= process.env.JWT_REFRESH_EXPIRES || '30d';
 
-if (!ACCESS_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('JWT_SECRET env variable must be set in production');
+let SECRET = ACCESS_SECRET;
+if (!SECRET && process.env.NODE_ENV === 'production') {
+  console.warn('WARNING: JWT_SECRET env variable is missing. Generating a volatile secret for this session.');
+  SECRET = crypto.randomBytes(32).toString('hex');
+} else if (!SECRET) {
+  SECRET = 'dev_secret_change_me';
 }
-
-const SECRET = ACCESS_SECRET || 'dev_secret_change_me';
 
 // ── Sign ─────────────────────────────────────────────────────
 function signAccessToken(payload) {
