@@ -55,6 +55,34 @@ function patchDb(k) {
     const res = await k.raw(text, params || []);
     return res.rows[0];
   };
+  k.queryAll = async (text, params) => {
+    const res = await k.raw(text, params || []);
+    return res.rows;
+  };
+  k.execute = async (text, params) => {
+    return await k.raw(text, params || []);
+  };
+  k.paginate = async (sql, params, { page = 1, limit = 10 }) => {
+    const offset = (page - 1) * limit;
+    const countSql = `SELECT COUNT(*) FROM (${sql}) AS count_query`;
+    const dataSql  = `${sql} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
+    
+    const [countRes, dataRes] = await Promise.all([
+      k.raw(countSql, params),
+      k.raw(dataSql, params)
+    ]);
+    
+    const total = parseInt(countRes.rows[0].count);
+    return {
+      data: dataRes.rows,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  };
   return k;
 }
 
