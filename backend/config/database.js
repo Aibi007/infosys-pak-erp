@@ -101,7 +101,7 @@ async function checkConnection() {
     logger.info('✅ Database connected successfully');
     return true;
   } catch (err) {
-    logger.error('❌ Database connection failed:', err.message);
+    logger.error(`❌ Database connection failed: ${err.message}`);
     return false;
   }
 }
