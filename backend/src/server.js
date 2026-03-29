@@ -154,7 +154,7 @@ async function boot() {
     process.exit(1);
   }
 
-  const server = app.listen(port, () => {
+  const server = app.listen(port, '0.0.0.0', () => {
     logger.info(`🚀 API running on port ${port}`);
     logger.info(`   Prefix  : ${PREFIX}`);
     logger.info(`   Env     : ${process.env.NODE_ENV || 'development'}`);
