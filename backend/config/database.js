@@ -47,44 +47,46 @@ const baseConfig = {
 
 // Helper to patch knex instances with legacy raw query methods
 function patchDb(k) {
+  // Yeh nayi line hai jo $1 ko ? mein badlay gi
+  const fixSql = (sql) => (typeof sql === 'string' ? sql.replace(/\$\d+/g, '?') : sql);
+
   k.query = async (text, params) => {
-    const res = await k.raw(text, params || []);
+    const res = await k.raw(fixSql(text), params || []);
     return res.rows;
   };
   k.queryOne = async (text, params) => {
-    const res = await k.raw(text, params || []);
+    const res = await k.raw(fixSql(text), params || []);
     return res.rows[0];
   };
   k.queryAll = async (text, params) => {
-    const res = await k.raw(text, params || []);
+    const res = await k.raw(fixSql(text), params || []);
     return res.rows;
   };
   k.execute = async (text, params) => {
-    return await k.raw(text, params || []);
+    return await k.raw(fixSql(text), params || []);
   };
   k.paginate = async (sql, params, { page = 1, limit = 10 }) => {
     const offset = (page - 1) * limit;
-    const countSql = `SELECT COUNT(*) FROM (${sql}) AS count_query`;
-    const dataSql  = `${sql} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
+    const countSql = `SELECT COUNT(*) FROM (${fixSql(sql)}) AS count_query`;
+    const dataSql  = `${fixSql(sql)} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
     
     const [countRes, dataRes] = await Promise.all([
-      k.raw(countSql, params),
-      k.raw(dataSql, params)
+      k.raw(countSql, params || []),
+      k.raw(dataSql, params || [])
     ]);
     
     const total = parseInt(countRes.rows[0].count);
     return {
       data: dataRes.rows,
       pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
+        total, page: parseInt(page), limit: parseInt(limit),
         totalPages: Math.ceil(total / limit)
       }
     };
   };
   return k;
 }
+
 
 // Root connection (public schema) — for tenant management
 const db = patchDb(knex(baseConfig));
