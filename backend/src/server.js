@@ -28,12 +28,15 @@ const PREFIX = process.env.API_PREFIX || '/api/v1';
 
 app.use(helmet({ contentSecurityPolicy: false }));
 const allowedOrigins = (process.env.CORS_ORIGIN || '*').split(',').map(s => s.trim());
+// Is hissay ko update karein:
 app.use(cors({
   origin: (origin, cb) => cb(null, true),
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','X-Tenant-Slug','X-Request-ID'],
+  // Yahan 'apikey' shamil kar diya hai:
+  allowedHeaders: ['Content-Type','Authorization','X-Tenant-Slug','X-Request-ID','apikey'], 
 }));
+
 
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
