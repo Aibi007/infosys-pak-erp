@@ -6,7 +6,9 @@
 // ================================================================
 const logger = require('../utils/logger');
 
-const isDev = process.env.NODE_ENV !== 'production';
+// Line 9 ko is se replace karein (temporarily debug karne ke liye):
+const isDev = true; 
+
 
 // Known error types we handle gracefully
 const PG_ERROR_CODES = {
