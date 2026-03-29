@@ -11,14 +11,19 @@ const logger = require('../src/utils/logger');
 // ── Connection config ────────────────────────────────────────────
 const baseConfig = {
   client: 'pg',
-  connection: {
-    host:     process.env.DB_HOST     || 'localhost',
-    port:     parseInt(process.env.DB_PORT) || 5432,
-    database: process.env.DB_NAME     || 'infosys_erp',
-    user:     process.env.DB_USER     || 'erp_user',
-    password: process.env.DB_PASSWORD || '',
-    ssl:      process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-  },
+  connection: process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DB_SSL !== 'false' && process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      }
+    : {
+        host:     process.env.DB_HOST     || 'localhost',
+        port:     parseInt(process.env.DB_PORT) || 5432,
+        database: process.env.DB_NAME     || 'infosys_erp',
+        user:     process.env.DB_USER     || 'erp_user',
+        password: process.env.DB_PASSWORD || '',
+        ssl:      process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      },
   pool: {
     min:            parseInt(process.env.DB_POOL_MIN) || 2,
     max:            parseInt(process.env.DB_POOL_MAX) || 20,
