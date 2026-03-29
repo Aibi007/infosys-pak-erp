@@ -61,36 +61,44 @@ app.use(errorHandler);
 async function setupDatabase() {
   logger.info('[BOOT] Checking database schema...');
   try {
-    // 1. Run Core SQL if users table is missing
+    // 1. Check if users table exists
     const hasUsers = await db.raw("SELECT to_regclass('public.users')").then(r => r.rows[0].to_regclass);
+    
     if (!hasUsers) {
-      logger.info('[BOOT] Core tables missing. Running initial migration...');
+      logger.info('[BOOT] Tables missing. Starting migration...');
       const sqlPath = path.join(__dirname, '../db/001_tenants_and_auth.sql');
       if (fs.existsSync(sqlPath)) {
         const sql = fs.readFileSync(sqlPath, 'utf8');
         await db.raw(sql);
-        logger.info('[BOOT] Initial migration successful.');
+        logger.info('[BOOT] Migration successful.');
+      } else {
+        logger.error('[BOOT] Migration SQL file not found!');
       }
+    } else {
+      logger.info('[BOOT] Users table already exists.');
     }
 
-    // 2. Ensure Super Admin
+    // 2. FORCE check/create Admin
     const adminEmail = 'admin@erp.pk';
-    const adminExist = await db.queryOne("SELECT id FROM public.users WHERE email = $1", [adminEmail]);
-    if (!adminExist) {
-      logger.info('[BOOT] Creating default Super Admin...');
+    const admin = await db.queryOne("SELECT id, is_super_admin FROM public.users WHERE email = ?", [adminEmail]);
+    
+    if (!admin) {
+      logger.info('[BOOT] Admin not found. Creating now...');
       const hash = await bcrypt.hash('Admin@123', 12);
       await db.raw(
-        "INSERT INTO public.users (email, password_hash, full_name, is_super_admin) VALUES (?, ?, ?, TRUE)",
-        [adminEmail, hash, 'Super Admin']
+        "INSERT INTO public.users (id, email, password_hash, full_name, is_super_admin, is_active) VALUES (gen_random_uuid(), ?, ?, 'Super Admin', TRUE, TRUE)",
+        [adminEmail, hash]
       );
-      logger.info('[BOOT] Super Admin created: admin@erp.pk / Admin@123');
+      logger.info('[BOOT] ✅ SUCCESS: Super Admin created: admin@erp.pk / Admin@123');
     } else {
-      logger.info('[BOOT] Super Admin already exists.');
+      logger.info(`[BOOT] Admin already exists (ID: ${admin.id}, Super: ${admin.is_super_admin})`);
     }
   } catch (err) {
-    logger.error(`[BOOT] Database setup failed: ${err.message}`);
+    logger.error(`[BOOT] ❌ Database setup error: ${err.message}`);
+    console.error(err);
   }
 }
+
 
 async function boot() {
   const port = parseInt(process.env.PORT || '4000');
