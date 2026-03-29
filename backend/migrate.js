@@ -15,14 +15,19 @@ const fs   = require("fs");
 const path = require("path");
 
 // ── CONFIG ───────────────────────────────────────────────────
-const DB = {
-  host:     process.env.DB_HOST     || "localhost",
-  port:     parseInt(process.env.DB_PORT || "5432"),
-  database: process.env.DB_NAME     || "infosys_pak",
-  user:     process.env.DB_USER     || "erp_admin",
-  password: process.env.DB_PASSWORD || "change_me",
-  ssl:      process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
-};
+const DB = process.env.DATABASE_URL 
+  ? { 
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DB_SSL !== 'false' && process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    } 
+  : {
+      host:     process.env.DB_HOST     || "localhost",
+      port:     parseInt(process.env.DB_PORT || "5432"),
+      database: process.env.DB_NAME     || "infosys_pak",
+      user:     process.env.DB_USER     || "erp_admin",
+      password: process.env.DB_PASSWORD || "change_me",
+      ssl:      process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
+    };
 
 const MIGRATIONS_DIR = path.join(__dirname, "db");
 const args = process.argv.slice(2);
@@ -52,7 +57,7 @@ const TENANT_MIGRATIONS = [
 const log  = (msg)       => console.log(`\x1b[36m[ERP]\x1b[0m ${msg}`);
 const ok   = (msg)       => console.log(`\x1b[32m[OK]\x1b[0m  ${msg}`);
 const warn = (msg)       => console.log(`\x1b[33m[WARN]\x1b[0m ${msg}`);
-const err  = (msg, e)    => { console.error(`\x1b[31m[ERR]\x1b[0m ${msg}`, e?.message || ""); process.exit(1); };
+const err  = (msg, e)    => { console.error(`\x1b[31m[ERR]\x1b[0m ${msg}`, e?.message || e || ""); process.exit(1); };
 
 async function withClient(fn) {
   const client = new Client(DB);
@@ -184,7 +189,7 @@ async function showStatus(client) {
 // ── MAIN ENTRY POINT ─────────────────────────────────────────
 async function main() {
   log("Infosys Pak ERP — Database Migration Runner");
-  log(`Connecting to: ${DB.host}:${DB.port}/${DB.database}`);
+  log(`Connecting to: ${process.env.DATABASE_URL ? "Production Database URL" : `${DB.host}:${DB.port}/${DB.database}`}`);
 
   await withClient(async (client) => {
     await ensureMigrationsTable(client);
