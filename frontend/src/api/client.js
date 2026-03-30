@@ -16,7 +16,7 @@
 import axios from 'axios';
 
 // ── Constants ─────────────────────────────────────────────────
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://api.erp.pk/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://infosys-pak-erp-production.up.railway.app/api/v1';
 const TOKEN_KEY    = 'erp_access_token';
 const REFRESH_KEY  = 'erp_refresh_token';
 const TENANT_KEY   = 'erp_tenant_slug';
