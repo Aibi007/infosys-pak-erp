@@ -4,14 +4,9 @@
 
 exports.up = async (knex) => {
 
-  // ── Enable extensions (once per DB) ──────────────────────────
-  await knex.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
-  await knex.raw('CREATE EXTENSION IF NOT EXISTS "pg_trgm"');   // fuzzy search
-  await knex.raw('CREATE EXTENSION IF NOT EXISTS "unaccent"');  // Urdu/diacritic search
-
   // ── Tenants ───────────────────────────────────────────────────
   await knex.schema.withSchema('public').createTable('tenants', t => {
-    t.uuid('id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+    t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
     t.string('slug', 60).notNullable().unique();           // used as PG schema name
     t.string('name', 200).notNullable();
     t.string('business_name', 200);
@@ -24,7 +19,7 @@ exports.up = async (knex) => {
     t.string('logo_url', 500);
     t.string('plan', 30).defaultTo('starter');             // starter | pro | enterprise
     t.boolean('is_active').defaultTo(true);
-    t.jsonb('settings').defaultTo('{}');
+    t.json('settings').defaultTo('{}');
     t.timestamp('trial_ends_at');
     t.timestamp('plan_expires_at');
     t.timestamps(true, true);
@@ -32,7 +27,7 @@ exports.up = async (knex) => {
 
   // ── Super-admin accounts (cross-tenant) ───────────────────────
   await knex.schema.withSchema('public').createTable('super_admins', t => {
-    t.uuid('id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+    t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
     t.string('email', 200).notNullable().unique();
     t.string('password_hash', 200).notNullable();
     t.string('name', 200).notNullable();
@@ -43,25 +38,25 @@ exports.up = async (knex) => {
 
   // ── Audit log (cross-tenant, public schema) ───────────────────
   await knex.schema.withSchema('public').createTable('audit_log', t => {
-    t.uuid('id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+    t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
     t.uuid('tenant_id').references('id').inTable('public.tenants').onDelete('CASCADE');
     t.string('actor_type', 20).defaultTo('user');  // user | system | super_admin
     t.uuid('actor_id');
     t.string('action', 100).notNullable();          // e.g. invoice.created
     t.string('entity_type', 100);
     t.uuid('entity_id');
-    t.jsonb('before').defaultTo('null');
-    t.jsonb('after').defaultTo('null');
+    t.json('before').defaultTo('null');
+    t.json('after').defaultTo('null');
     t.string('ip_address', 45);
     t.string('user_agent', 500);
     t.timestamp('created_at').defaultTo(knex.fn.now());
   });
 
   await knex.schema.raw(`
-    CREATE INDEX idx_audit_tenant  ON public.audit_log(tenant_id);
-    CREATE INDEX idx_audit_actor   ON public.audit_log(actor_id);
-    CREATE INDEX idx_audit_entity  ON public.audit_log(entity_type, entity_id);
-    CREATE INDEX idx_audit_created ON public.audit_log(created_at DESC);
+    CREATE INDEX idx_audit_tenant  ON audit_log(tenant_id);
+    CREATE INDEX idx_audit_actor   ON audit_log(actor_id);
+    CREATE INDEX idx_audit_entity  ON audit_log(entity_type, entity_id);
+    CREATE INDEX idx_audit_created ON audit_log(created_at DESC);
   `);
 
   // ── Plan limits ───────────────────────────────────────────────
