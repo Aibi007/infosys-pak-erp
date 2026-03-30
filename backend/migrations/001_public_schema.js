@@ -5,9 +5,9 @@
 exports.up = async (knex) => {
 
   // ── Tenants ───────────────────────────────────────────────────
-  await knex.schema.withSchema('public').createTable('tenants', t => {
+  await knex.schema.createTable('tenants', t => {
     t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
-    t.string('slug', 60).notNullable().unique();           // used as PG schema name
+    t.string('slug', 60).notNullable().unique();
     t.string('name', 200).notNullable();
     t.string('business_name', 200);
     t.string('ntn', 20);
@@ -17,16 +17,16 @@ exports.up = async (knex) => {
     t.string('phone', 30);
     t.string('email', 200);
     t.string('logo_url', 500);
-    t.string('plan', 30).defaultTo('starter');             // starter | pro | enterprise
+    t.string('plan', 30).defaultTo('starter');
     t.boolean('is_active').defaultTo(true);
-    t.json('settings').defaultTo('{}');
+    t.json('settings');
     t.timestamp('trial_ends_at');
     t.timestamp('plan_expires_at');
     t.timestamps(true, true);
   });
 
   // ── Super-admin accounts (cross-tenant) ───────────────────────
-  await knex.schema.withSchema('public').createTable('super_admins', t => {
+  await knex.schema.createTable('super_admins', t => {
     t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
     t.string('email', 200).notNullable().unique();
     t.string('password_hash', 200).notNullable();
@@ -37,16 +37,16 @@ exports.up = async (knex) => {
   });
 
   // ── Audit log (cross-tenant, public schema) ───────────────────
-  await knex.schema.withSchema('public').createTable('audit_log', t => {
+  await knex.schema.createTable('audit_log', t => {
     t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
-    t.uuid('tenant_id').references('id').inTable('public.tenants').onDelete('CASCADE');
-    t.string('actor_type', 20).defaultTo('user');  // user | system | super_admin
+    t.uuid('tenant_id').references('id').inTable('tenants').onDelete('CASCADE');
+    t.string('actor_type', 20).defaultTo('user');
     t.uuid('actor_id');
-    t.string('action', 100).notNullable();          // e.g. invoice.created
+    t.string('action', 100).notNullable();
     t.string('entity_type', 100);
     t.uuid('entity_id');
-    t.json('before').defaultTo('null');
-    t.json('after').defaultTo('null');
+    t.json('before');
+    t.json('after');
     t.string('ip_address', 45);
     t.string('user_agent', 500);
     t.timestamp('created_at').defaultTo(knex.fn.now());
@@ -60,7 +60,7 @@ exports.up = async (knex) => {
   `);
 
   // ── Plan limits ───────────────────────────────────────────────
-  await knex.schema.withSchema('public').createTable('plan_limits', t => {
+  await knex.schema.createTable('plan_limits', t => {
     t.string('plan', 30).primary();
     t.integer('max_users').defaultTo(3);
     t.integer('max_branches').defaultTo(1);
@@ -79,8 +79,8 @@ exports.up = async (knex) => {
 };
 
 exports.down = async (knex) => {
-  await knex.schema.withSchema('public').dropTableIfExists('plan_limits');
-  await knex.schema.withSchema('public').dropTableIfExists('audit_log');
-  await knex.schema.withSchema('public').dropTableIfExists('super_admins');
-  await knex.schema.withSchema('public').dropTableIfExists('tenants');
+  await knex.schema.dropTableIfExists('plan_limits');
+  await knex.schema.dropTableIfExists('audit_log');
+  await knex.schema.dropTableIfExists('super_admins');
+  await knex.schema.dropTableIfExists('tenants');
 };
