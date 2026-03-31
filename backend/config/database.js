@@ -4,9 +4,19 @@ const knex   = require('knex');
 const logger = require('../src/utils/logger');
 
 // ── Connection config ───────────────────────────────────────────
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+// In production (like on Railway), a direct connection string is used,
+// but with SSL enabled. For local development, the connection string is enough.
+const connection = {
+  connectionString: process.env.DATABASE_URL,
+  ...(isProduction && { ssl: { rejectUnauthorized: false } }),
+};
+
 const baseConfig = {
   client: 'pg',
-  connection: process.env.DATABASE_URL,
+  connection: connection,
   pool: {
     min:            parseInt(process.env.DB_POOL_MIN) || 2,
     max:            parseInt(process.env.DB_POOL_MAX) || 20,
@@ -21,8 +31,9 @@ const baseConfig = {
   seeds: {
     directory: './seeds',
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: !isProduction,
 };
+
 
 function patchDb(k) {
 
