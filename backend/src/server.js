@@ -1,14 +1,18 @@
+
 'use strict';
 require('dotenv').config();
 
+// Ensure a JWT secret is set, otherwise auth will fail
+if (!process.env.JWT_SECRET) {
+  console.warn('WARNING: JWT_SECRET env variable is missing. Generating a volatile secret for this session. For production, this MUST be a static value.');
+  process.env.JWT_SECRET = require('crypto').randomBytes(32).toString('hex');
+}
+
 const express     = require('express');
 const helmet      = require('helmet');
-const cors        = require('cors');
 const compression = require('compression');
 const morgan      = require('morgan');
 const bcrypt      = require('bcryptjs');
-const fs          = require('fs');
-const path        = require('path');
 
 const logger             = require('./utils/logger');
 const { db, checkConnection, destroyConnections } = require('../config/database');
@@ -36,9 +40,14 @@ const fbrRoutes       = require('./routes/fbr');
 const app    = express();
 const PREFIX = process.env.API_PREFIX || '/api/v1';
 
-app.use(helmet({ contentSecurityPolicy: false }));
+// -------------------------------------------------------------------
+// MIDDLEWARE STACK
+// NOTE: Order is critical!
+// -------------------------------------------------------------------
 
-// Custom CORS Middleware to forcefully handle pre-flight requests
+// 1. Custom CORS Middleware (Highest Priority)
+// Must run first to handle pre-flight OPTIONS requests and send CORS
+// headers before any other middleware can interfere.
 app.use((req, res, next) => {
   const allowedOrigins = [
     'http://localhost:3000',
@@ -47,10 +56,11 @@ app.use((req, res, next) => {
   ];
   const origin = req.headers.origin;
 
+  // Dynamically set origin based on what the browser is sending
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else {
-    // Fallback to wildcard for development; in production, you might want to restrict this
+    // For other cases (like Postman), you can have a fallback
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
 
@@ -58,29 +68,44 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Slug, X-Request-ID, apikey');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-  // Intercept and handle OPTIONS pre-flight requests
+  // Immediately respond to pre-flight OPTIONS requests
   if (req.method === 'OPTIONS') {
-    res.sendStatus(204); // Respond with 204 No Content
-  } else {
-    next();
+    return res.sendStatus(204); // Use return to end execution here
   }
+
+  next();
 });
 
+// 2. Security headers (Helmet)
+app.use(helmet({ contentSecurityPolicy: false })); // CSP handled by frontend if needed
+
+// 3. Request ID injection
+app.use(requestId);
+
+// 4. Logging (Morgan)
+app.use(morgan(':method :url :status - :response-time ms', {
+  stream: { write: msg => logger.http(msg.trim()) },
+  skip: (req) => req.url === '/health', // Don't log health checks
+}));
+
+// 5. Body parsers and Compression
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(requestId);
-app.use(morgan(':method :url :status - :response-time ms', {
-  stream: { write: msg => logger.http(msg.trim()) },
-  skip: (req) => req.url === '/health',
-}));
 
-// Health check
+// -------------------------------------------------------------------
+// PUBLIC ROUTES & HEALTH CHECKS
+// -------------------------------------------------------------------
+
 app.get('/health', async (_req, res) => {
   const dbOk = await checkConnection().catch(() => false);
   res.status(dbOk ? 200 : 503).json({ status: dbOk ? 'healthy' : 'degraded', timestamp: new Date().toISOString() });
 });
 app.get('/ready', (_req, res) => res.json({ ready: true }));
+
+// -------------------------------------------------------------------
+// API ROUTING
+// -------------------------------------------------------------------
 
 // Rate limiters
 app.use(`${PREFIX}/auth`, rateLimiter.auth);
@@ -89,10 +114,10 @@ app.use(PREFIX, rateLimiter.api);
 // Public routes
 app.use(`${PREFIX}/auth`, authRoutes);
 
-// Tenant resolver
+// Tenant resolver (middleware to identify which tenant DB to use)
 app.use(tenantResolver);
 
-// Protected routes
+// Protected routes (all require a valid JWT and tenant context)
 app.use(`${PREFIX}/dashboard`,      dashboardRoutes);
 app.use(`${PREFIX}/users`,          usersRoutes);
 app.use(`${PREFIX}/settings`,       settingsRoutes);
@@ -108,14 +133,22 @@ app.use(`${PREFIX}/accounting`,     accountingRoutes);
 app.use(`${PREFIX}/reports`,        reportsRoutes);
 app.use(`${PREFIX}/fbr`,            fbrRoutes);
 
-// 404
+// -------------------------------------------------------------------
+// ERROR HANDLING
+// -------------------------------------------------------------------
+
+// 404 Handler for routes not found
 app.use((req, res) => {
   res.status(404).json({ success: false, error: 'Route not found', path: req.path });
 });
 
+// Global error handler
 app.use(errorHandler);
 
-// Database setup on boot
+// -------------------------------------------------------------------
+// DATABASE & SERVER BOOTSTRAP
+// -------------------------------------------------------------------
+
 async function setupDatabase() {
   logger.info('[BOOT] Ensuring super admin exists...');
   try {
@@ -123,7 +156,6 @@ async function setupDatabase() {
     const adminPass  = process.env.SUPER_ADMIN_PASSWORD || 'Admin@123';
     const hash = await bcrypt.hash(adminPass, 12);
 
-    // Check if the admin exists in the 'super_admins' table
     const adminResult = await db.raw('SELECT id FROM super_admins WHERE email = ?', [adminEmail]);
     const adminExists = adminResult[0] && adminResult[0].length > 0;
 
@@ -155,9 +187,11 @@ async function boot() {
     logger.info(`   Routes: products, customers, invoices, inventory, hr, payroll, accounting`);
   });
 
-  process.on('SIGTERM', async () => { await destroyConnections(); process.exit(0); });
-  process.on('SIGINT',  async () => { await destroyConnections(); process.exit(0); });
+  // Graceful shutdown
+  process.on('SIGTERM', async () => { logger.info('SIGTERM received'); await destroyConnections(); process.exit(0); });
+  process.on('SIGINT',  async () => { logger.info('SIGINT received'); await destroyConnections(); process.exit(0); });
 }
 
 boot();
+
 module.exports = app;
