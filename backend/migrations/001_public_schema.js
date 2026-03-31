@@ -55,14 +55,13 @@ exports.up = async (knex) => {
       t.string('ip_address', 45);
       t.string('user_agent', 500);
       t.timestamp('created_at').defaultTo(knex.fn.now());
-    });
 
-    await knex.schema.raw(`
-      CREATE INDEX idx_audit_tenant  ON audit_log(tenant_id);
-      CREATE INDEX idx_audit_actor   ON audit_log(actor_id);
-      CREATE INDEX idx_audit_entity  ON audit_log(entity_type, entity_id);
-      CREATE INDEX idx_audit_created ON audit_log(created_at DESC);
-    `);
+      // Add indexes for faster queries
+      t.index('tenant_id');
+      t.index('actor_id');
+      t.index(['entity_type', 'entity_id']);
+      t.index('created_at');
+    });
   }
 
   // ── Plan limits ───────────────────────────────────────────────
@@ -77,7 +76,11 @@ exports.up = async (knex) => {
       t.boolean('has_hr').defaultTo(false);
       t.boolean('has_api_access').defaultTo(false);
     });
-
+  }
+  
+  // Seed plan limits only if table is empty to ensure idempotency
+  const planLimitsCount = await knex('plan_limits').count('plan as count').first();
+  if (planLimitsCount.count === 0) {
     await knex('plan_limits').insert([
       { plan:'starter',    max_users:3,  max_branches:1, max_products:500,   max_invoices_per_month:500,  has_fbr:false, has_hr:false, has_api_access:false },
       { plan:'pro',        max_users:15, max_branches:3, max_products:5000,  max_invoices_per_month:5000, has_fbr:true,  has_hr:true,  has_api_access:false },
