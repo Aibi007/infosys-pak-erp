@@ -8,7 +8,7 @@ exports.up = async (knex) => {
   // ── Branches ──────────────────────────────────────────────────
   if (!await knex.schema.hasTable('branches')) {
     await knex.schema.createTable('branches', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('name', 200).notNullable();
       t.string('code', 20).notNullable().unique();
       t.string('address', 500);
@@ -24,7 +24,7 @@ exports.up = async (knex) => {
   // ── Users (tenant-scoped) ────────────────────────────────────
   if (!await knex.schema.hasTable('users')) {
     await knex.schema.createTable('users', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('branch_id').references('id').inTable('branches').onDelete('SET NULL');
       t.string('name', 200).notNullable();
       t.string('email', 200).notNullable().unique();
@@ -44,7 +44,7 @@ exports.up = async (knex) => {
   // ── Settings ─────────────────────────────────────────────────
   if (!await knex.schema.hasTable('settings')) {
     await knex.schema.createTable('settings', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('key', 100).notNullable().unique();
       t.text('value');
       t.string('type', 20).defaultTo('string'); // string|number|boolean|json
@@ -57,7 +57,7 @@ exports.up = async (knex) => {
   // ── Chart of Accounts ────────────────────────────────────────
   if (!await knex.schema.hasTable('accounts')) {
     await knex.schema.createTable('accounts', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('parent_id').references('id').inTable('accounts').onDelete('SET NULL');
       t.string('code', 20).notNullable().unique();
       t.string('name', 200).notNullable();
@@ -79,7 +79,7 @@ exports.up = async (knex) => {
   // ── Tax rates ────────────────────────────────────────────────
   if (!await knex.schema.hasTable('tax_rates')) {
     await knex.schema.createTable('tax_rates', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('name', 100).notNullable();
       t.decimal('rate', 8, 4).notNullable();           // e.g. 17.0000 for 17%
       t.string('type', 20).defaultTo('GST');           // GST | FED | WHT | exempt
@@ -91,7 +91,7 @@ exports.up = async (knex) => {
   
   // Seed default settings only if the table is empty
   const settingsCount = await knex('settings').count('id as count').first();
-  if (settingsCount.count === 0) {
+  if (parseInt(settingsCount.count) === 0) {
     await knex('settings').insert([
         { key:'company_name',       value:'Al-Baraka Textiles',  type:'string', group:'company',     label:'Company Name' },
         { key:'company_ntn',        value:'',                    type:'string', group:'company',     label:'NTN Number' },
@@ -112,7 +112,7 @@ exports.up = async (knex) => {
 
   // Seed system tax rates only if table is empty
   const taxRatesCount = await knex('tax_rates').count('id as count').first();
-  if (taxRatesCount.count === 0) {
+  if (parseInt(taxRatesCount.count) === 0) {
       await knex('tax_rates').insert([
         { name:'GST 17%',   rate:17.0000, type:'GST', is_default:true  },
         { name:'GST 0%',    rate:0.0000,  type:'GST', is_default:false },

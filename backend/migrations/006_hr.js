@@ -5,7 +5,7 @@ exports.up = async (knex) => {
   // ── Employees ─────────────────────────────────────────────────
   if (!await knex.schema.hasTable('employees')) {
     await knex.schema.createTable('employees', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('branch_id').references('id').inTable('branches').onDelete('SET NULL');
       t.string('emp_no', 30).notNullable().unique();
       t.string('name', 300).notNullable();
@@ -46,7 +46,7 @@ exports.up = async (knex) => {
   // ── Leave Entitlements ────────────────────────────────────────
   if (!await knex.schema.hasTable('leave_types')) {
     await knex.schema.createTable('leave_types', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('name', 100).notNullable();
       t.integer('days_per_year').notNullable().defaultTo(0);
       t.boolean('is_paid').defaultTo(true);
@@ -57,20 +57,20 @@ exports.up = async (knex) => {
 
   // Seed leave types
   const leaveTypesCount = await knex('leave_types').count('id as count').first();
-  if (leaveTypesCount.count === 0) {
+  if (parseInt(leaveTypesCount.count) === 0) {
     await knex('leave_types').insert([
-      { id: knex.raw('(UUID())'), name:'Annual Leave',    days_per_year:21, is_paid:true  },
-      { id: knex.raw('(UUID())'), name:'Sick Leave',      days_per_year:10, is_paid:true  },
-      { id: knex.raw('(UUID())'), name:'Casual Leave',    days_per_year:10, is_paid:true  },
-      { id: knex.raw('(UUID())'), name:'Maternity Leave', days_per_year:84, is_paid:true  },
-      { id: knex.raw('(UUID())'), name:'Unpaid Leave',    days_per_year:30, is_paid:false },
+      { id: knex.raw('gen_random_uuid()'), name:'Annual Leave',    days_per_year:21, is_paid:true  },
+      { id: knex.raw('gen_random_uuid()'), name:'Sick Leave',      days_per_year:10, is_paid:true  },
+      { id: knex.raw('gen_random_uuid()'), name:'Casual Leave',    days_per_year:10, is_paid:true  },
+      { id: knex.raw('gen_random_uuid()'), name:'Maternity Leave', days_per_year:84, is_paid:true  },
+      { id: knex.raw('gen_random_uuid()'), name:'Unpaid Leave',    days_per_year:30, is_paid:false },
     ]);
   }
 
   // ── Leave Balances (per employee per year) ────────────────────
   if (!await knex.schema.hasTable('leave_balances')) {
     await knex.schema.createTable('leave_balances', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('employee_id').notNullable().references('id').inTable('employees').onDelete('CASCADE');
       t.uuid('leave_type_id').notNullable().references('id').inTable('leave_types').onDelete('CASCADE');
       t.integer('year').notNullable();
@@ -85,7 +85,7 @@ exports.up = async (knex) => {
   // ── Leave Requests ────────────────────────────────────────────
   if (!await knex.schema.hasTable('leave_requests')) {
     await knex.schema.createTable('leave_requests', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('employee_id').notNullable().references('id').inTable('employees').onDelete('CASCADE');
       t.uuid('leave_type_id').notNullable().references('id').inTable('leave_types').onDelete('RESTRICT');
       t.date('from_date').notNullable();
@@ -103,7 +103,7 @@ exports.up = async (knex) => {
   // ── Attendance ────────────────────────────────────────────────
   if (!await knex.schema.hasTable('attendance')) {
     await knex.schema.createTable('attendance', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('employee_id').notNullable().references('id').inTable('employees').onDelete('CASCADE');
       t.date('att_date').notNullable();
       t.string('status', 10).notNullable().defaultTo('P');
@@ -122,7 +122,7 @@ exports.up = async (knex) => {
   // ── Payroll Runs ──────────────────────────────────────────────
   if (!await knex.schema.hasTable('payroll_runs')) {
     await knex.schema.createTable('payroll_runs', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('month', 7).notNullable().unique();
       t.integer('year').notNullable();
       t.string('status', 20).defaultTo('draft');
@@ -142,7 +142,7 @@ exports.up = async (knex) => {
   // ── Payroll Lines (one per employee per run) ──────────────────
   if (!await knex.schema.hasTable('payroll_lines')) {
     await knex.schema.createTable('payroll_lines', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('run_id').notNullable().references('id').inTable('payroll_runs').onDelete('CASCADE');
       t.uuid('employee_id').notNullable().references('id').inTable('employees').onDelete('RESTRICT');
       t.integer('working_days').notNullable();

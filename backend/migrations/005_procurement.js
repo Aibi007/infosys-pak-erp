@@ -5,7 +5,7 @@ exports.up = async (knex) => {
   // ── Vendors ───────────────────────────────────────────────────
   if (!await knex.schema.hasTable('vendors')) {
     await knex.schema.createTable('vendors', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('code', 30).notNullable().unique();
       t.string('name', 300).notNullable();
       t.string('name_ur', 300);
@@ -38,7 +38,7 @@ exports.up = async (knex) => {
   // ── Purchase Orders ───────────────────────────────────────────
   if (!await knex.schema.hasTable('purchase_orders')) {
     await knex.schema.createTable('purchase_orders', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('po_no', 50).notNullable().unique();
       t.uuid('vendor_id').notNullable().references('id').inTable('vendors').onDelete('RESTRICT');
       t.uuid('warehouse_id').references('id').inTable('warehouses').onDelete('SET NULL');
@@ -64,7 +64,7 @@ exports.up = async (knex) => {
   // ── PO Line Items ─────────────────────────────────────────────
   if (!await knex.schema.hasTable('purchase_order_items')) {
     await knex.schema.createTable('purchase_order_items', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('po_id').notNullable().references('id').inTable('purchase_orders').onDelete('CASCADE');
       t.uuid('product_id').references('id').inTable('products').onDelete('RESTRICT');
       t.uuid('variant_id').references('id').inTable('product_variants').onDelete('SET NULL');
@@ -84,7 +84,7 @@ exports.up = async (knex) => {
   // ── Goods Receipt Notes ───────────────────────────────────────
   if (!await knex.schema.hasTable('grns')) {
     await knex.schema.createTable('grns', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('grn_no', 50).notNullable().unique();
       t.uuid('po_id').notNullable().references('id').inTable('purchase_orders').onDelete('RESTRICT');
       t.uuid('vendor_id').references('id').inTable('vendors').onDelete('SET NULL');
@@ -104,7 +104,7 @@ exports.up = async (knex) => {
   // ── GRN Line Items ────────────────────────────────────────────
   if (!await knex.schema.hasTable('grn_items')) {
     await knex.schema.createTable('grn_items', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('grn_id').notNullable().references('id').inTable('grns').onDelete('CASCADE');
       t.uuid('po_item_id').references('id').inTable('purchase_order_items').onDelete('SET NULL');
       t.uuid('product_id').references('id').inTable('products').onDelete('RESTRICT');

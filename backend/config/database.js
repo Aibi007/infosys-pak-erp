@@ -5,23 +5,14 @@ const logger = require('../src/utils/logger');
 
 // ── Connection config ───────────────────────────────────────────
 const baseConfig = {
-  client: 'mysql2',
-  connection: {
-    host:     process.env.MYSQLHOST            || 'mysql.railway.internal',
-    port:     parseInt(process.env.MYSQLPORT)    || 3306,
-    database: process.env.MYSQLDATABASE        || 'railway',
-    user:     process.env.MYSQLUSER            || 'root',
-    password: process.env.MYSQLPASSWORD        || 'obxoZjlUhneIkwMGfmLxEoKcuagZdapM',
-  },
+  client: 'pg',
+  connection: process.env.DATABASE_URL,
   pool: {
     min:            parseInt(process.env.DB_POOL_MIN) || 2,
     max:            parseInt(process.env.DB_POOL_MAX) || 20,
     acquireTimeoutMillis: 30000,
     idleTimeoutMillis:    600000,
     reapIntervalMillis:   1000,
-    afterCreate: (conn, done) => {
-      conn.query('SET SESSION max_execution_time = 30000;', (err) => done(err, conn));
-    },
   },
   migrations: {
     directory: './migrations',
@@ -34,36 +25,35 @@ const baseConfig = {
 };
 
 function patchDb(k) {
-  const fixSql = (sql) => (typeof sql === 'string' ? sql.replace(/\$\d+/g, '?') : sql);
 
   k.query = async (text, params) => {
-    const res = await k.raw(fixSql(text), params || []);
-    return res[0];
+    const res = await k.raw(text, params || []);
+    return res.rows;
   };
   k.queryOne = async (text, params) => {
-    const res = await k.raw(fixSql(text), params || []);
-    return res[0][0];
+    const res = await k.raw(text, params || []);
+    return res.rows[0];
   };
   k.queryAll = async (text, params) => {
-    const res = await k.raw(fixSql(text), params || []);
-    return res[0];
+    const res = await k.raw(text, params || []);
+    return res.rows;
   };
   k.execute = async (text, params) => {
-    return await k.raw(fixSql(text), params || []);
+    return await k.raw(text, params || []);
   };
   k.paginate = async (sql, params, { page = 1, limit = 10 }) => {
     const offset = (page - 1) * limit;
-    const countSql = `SELECT COUNT(*) AS count FROM (${fixSql(sql)}) AS count_query`;
-    const dataSql  = `${fixSql(sql)} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
+    const countSql = `SELECT COUNT(*) AS count FROM (${sql}) AS count_query`;
+    const dataSql  = `${sql} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
 
     const [countRes, dataRes] = await Promise.all([
       k.raw(countSql, params || []),
       k.raw(dataSql, params || [])
     ]);
 
-    const total = parseInt(countRes[0][0].count);
+    const total = parseInt(countRes.rows[0].count, 10);
     return {
-      data: dataRes[0],
+      data: dataRes.rows,
       pagination: {
         total, page: parseInt(page), limit: parseInt(limit),
         totalPages: Math.ceil(total / limit)

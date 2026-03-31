@@ -5,7 +5,7 @@ exports.up = async (knex) => {
   // ── Warehouses ────────────────────────────────────────────────
   if (!await knex.schema.hasTable('warehouses')) {
     await knex.schema.createTable('warehouses', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('branch_id').references('id').inTable('branches').onDelete('SET NULL');
       t.string('name', 200).notNullable();
       t.string('code', 20).notNullable().unique();
@@ -20,7 +20,7 @@ exports.up = async (knex) => {
   // ── Categories ────────────────────────────────────────────────
   if (!await knex.schema.hasTable('categories')) {
     await knex.schema.createTable('categories', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('parent_id').references('id').inTable('categories').onDelete('SET NULL');
       t.string('name', 200).notNullable();
       t.string('name_ur', 200);
@@ -34,7 +34,7 @@ exports.up = async (knex) => {
   // ── Products ──────────────────────────────────────────────────
   if (!await knex.schema.hasTable('products')) {
     await knex.schema.createTable('products', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('category_id').references('id').inTable('categories').onDelete('SET NULL');
       t.uuid('tax_rate_id').references('id').inTable('tax_rates').onDelete('SET NULL');
       t.string('name', 500).notNullable();
@@ -61,7 +61,7 @@ exports.up = async (knex) => {
   // ── Product Variants ──────────────────────────────────────────
   if (!await knex.schema.hasTable('product_variants')) {
     await knex.schema.createTable('product_variants', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('product_id').notNullable().references('id').inTable('products').onDelete('CASCADE');
       t.string('sku', 100).unique();
       t.string('barcode', 100).unique();
@@ -79,7 +79,7 @@ exports.up = async (knex) => {
   // ── Stock (warehouse × variant) ───────────────────────────────
   if (!await knex.schema.hasTable('stock')) {
     await knex.schema.createTable('stock', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('product_id').notNullable().references('id').inTable('products').onDelete('CASCADE');
       t.uuid('variant_id').references('id').inTable('product_variants').onDelete('CASCADE');
       t.uuid('warehouse_id').notNullable().references('id').inTable('warehouses').onDelete('CASCADE');
@@ -93,7 +93,7 @@ exports.up = async (knex) => {
   // ── Stock Movements (immutable ledger) ───────────────────────
   if (!await knex.schema.hasTable('stock_movements')) {
     await knex.schema.createTable('stock_movements', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('product_id').notNullable().references('id').inTable('products');
       t.uuid('variant_id').references('id').inTable('product_variants');
       t.uuid('from_warehouse_id').references('id').inTable('warehouses');

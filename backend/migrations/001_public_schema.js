@@ -7,7 +7,7 @@ exports.up = async (knex) => {
   // ── Tenants ───────────────────────────────────────────────────
   if (!await knex.schema.hasTable('tenants')) {
     await knex.schema.createTable('tenants', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('slug', 60).notNullable().unique();
       t.string('name', 200).notNullable();
       t.string('business_name', 200);
@@ -30,7 +30,7 @@ exports.up = async (knex) => {
   // ── Super-admin accounts (cross-tenant) ───────────────────────
   if (!await knex.schema.hasTable('super_admins')) {
     await knex.schema.createTable('super_admins', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('email', 200).notNullable().unique();
       t.string('password_hash', 200).notNullable();
       t.string('name', 200).notNullable();
@@ -43,7 +43,7 @@ exports.up = async (knex) => {
   // ── Audit log (cross-tenant, public schema) ───────────────────
   if (!await knex.schema.hasTable('audit_log')) {
     await knex.schema.createTable('audit_log', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('tenant_id').references('id').inTable('tenants').onDelete('CASCADE');
       t.string('actor_type', 20).defaultTo('user');
       t.uuid('actor_id');
@@ -80,7 +80,7 @@ exports.up = async (knex) => {
   
   // Seed plan limits only if table is empty to ensure idempotency
   const planLimitsCount = await knex('plan_limits').count('plan as count').first();
-  if (planLimitsCount.count === 0) {
+  if (parseInt(planLimitsCount.count) === 0) {
     await knex('plan_limits').insert([
       { plan:'starter',    max_users:3,  max_branches:1, max_products:500,   max_invoices_per_month:500,  has_fbr:false, has_hr:false, has_api_access:false },
       { plan:'pro',        max_users:15, max_branches:3, max_products:5000,  max_invoices_per_month:5000, has_fbr:true,  has_hr:true,  has_api_access:false },

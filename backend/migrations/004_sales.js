@@ -5,7 +5,7 @@ exports.up = async (knex) => {
   // ── Customers ─────────────────────────────────────────────────
   if (!await knex.schema.hasTable('customers')) {
     await knex.schema.createTable('customers', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('code', 30).notNullable().unique();
       t.string('name', 300).notNullable();
       t.string('name_ur', 300);
@@ -35,7 +35,7 @@ exports.up = async (knex) => {
   // ── Invoices ──────────────────────────────────────────────────
   if (!await knex.schema.hasTable('invoices')) {
     await knex.schema.createTable('invoices', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('invoice_no', 50).notNullable().unique();
       t.uuid('customer_id').references('id').inTable('customers').onDelete('RESTRICT');
       t.uuid('branch_id').references('id').inTable('branches').onDelete('SET NULL');
@@ -68,7 +68,7 @@ exports.up = async (knex) => {
   // ── Invoice Line Items ────────────────────────────────────────
   if (!await knex.schema.hasTable('invoice_items')) {
     await knex.schema.createTable('invoice_items', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('invoice_id').notNullable().references('id').inTable('invoices').onDelete('CASCADE');
       t.uuid('product_id').references('id').inTable('products').onDelete('RESTRICT');
       t.uuid('variant_id').references('id').inTable('product_variants').onDelete('SET NULL');
@@ -91,7 +91,7 @@ exports.up = async (knex) => {
   // ── Payments / Receipts ───────────────────────────────────────
   if (!await knex.schema.hasTable('payments')) {
     await knex.schema.createTable('payments', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('payment_no', 50).notNullable().unique();
       t.string('payment_type', 20).notNullable();
       t.uuid('customer_id').references('id').inTable('customers').onDelete('SET NULL');
@@ -114,7 +114,7 @@ exports.up = async (knex) => {
   // ── Journal Entries (double-entry ledger) ─────────────────────
   if (!await knex.schema.hasTable('journal_entries')) {
     await knex.schema.createTable('journal_entries', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('voucher_no', 50).notNullable().unique();
       t.string('voucher_type', 30).notNullable();
       t.date('entry_date').notNullable();
@@ -135,7 +135,7 @@ exports.up = async (knex) => {
   // ── Journal Lines ─────────────────────────────────────────────
   if (!await knex.schema.hasTable('journal_lines')) {
     await knex.schema.createTable('journal_lines', t => {
-      t.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('journal_id').notNullable().references('id').inTable('journal_entries').onDelete('CASCADE');
       t.uuid('account_id').notNullable().references('id').inTable('accounts').onDelete('RESTRICT');
       t.text('description');
