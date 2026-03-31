@@ -70,11 +70,11 @@ app.use(morgan(':method :url :status - :response-time ms', {
 }));
 
 // Health check
-ap.get('/health', async (_req, res) => {
+app.get('/health', async (_req, res) => {
   const dbOk = await checkConnection().catch(() => false);
   res.status(dbOk ? 200 : 503).json({ status: dbOk ? 'healthy' : 'degraded', timestamp: new Date().toISOString() });
 });
-ap.get('/ready', (_req, res) => res.json({ ready: true }));
+app.get('/ready', (_req, res) => res.json({ ready: true }));
 
 // Rate limiters
 app.use(`${PREFIX}/auth`, rateLimiter.auth);
