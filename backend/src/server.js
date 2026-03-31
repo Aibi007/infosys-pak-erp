@@ -37,7 +37,34 @@ const app    = express();
 const PREFIX = process.env.API_PREFIX || '/api/v1';
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors());
+
+// Custom CORS Middleware to forcefully handle pre-flight requests
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://infosys-pak-erp-eight.vercel.app'
+  ];
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    // Fallback to wildcard for development; in production, you might want to restrict this
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Slug, X-Request-ID, apikey');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  // Intercept and handle OPTIONS pre-flight requests
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204); // Respond with 204 No Content
+  } else {
+    next();
+  }
+});
 
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
