@@ -38,8 +38,20 @@ const PREFIX = process.env.API_PREFIX || '/api/v1';
 
 app.use(helmet({ contentSecurityPolicy: false }));
 
+const whitelist = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://infosys-pak-erp-eight.vercel.app'
+];
+
 app.use(cors({
-  origin: (origin, cb) => cb(null, true),
+  origin: (origin, callback) => {
+    if (whitelist.indexOf(origin) !== -1 || !origin) { 
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','X-Tenant-Slug','X-Request-ID','apikey'],
@@ -55,11 +67,11 @@ app.use(morgan(':method :url :status - :response-time ms', {
 }));
 
 // Health check
-app.get('/health', async (_req, res) => {
+ap.get('/health', async (_req, res) => {
   const dbOk = await checkConnection().catch(() => false);
   res.status(dbOk ? 200 : 503).json({ status: dbOk ? 'healthy' : 'degraded', timestamp: new Date().toISOString() });
 });
-app.get('/ready', (_req, res) => res.json({ ready: true }));
+ap.get('/ready', (_req, res) => res.json({ ready: true }));
 
 // Rate limiters
 app.use(`${PREFIX}/auth`, rateLimiter.auth);
