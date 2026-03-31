@@ -938,7 +938,7 @@ export default function HRModule() {
 // ADD EMPLOYEE MODAL
 // ══════════════════════════════════════════════════════════════════
 function AddEmployeeModal({depts,desig,onClose,onSave}){
-  const [f,setF]=useState({name:"",fatherName:"",cnic:"",phone:"",email:"",dept:"Accounts",designation:"Accounts Officer",branch:"Lahore Main",join:TODAY,type:"Permanent",gender:"Male",dob:"",qualification:"",basicSalary:40000,bank:"HBL",iban:"",notes:""});
+  const [f,setF]=useState({name:"",fatherName:"",cnic:"",phone:"",email:"",dept:"Accounts",designation:"Accounts Officer",branch:"Lahore Main",city:"Lahore",join:TODAY,type:"Permanent",gender:"Male",dob:"",qualification:"",basicSalary:40000,bank:"HBL",iban:"",notes:""});
   const upd=(k,v)=>setF(p=>({...p,[k]:v}));
   const s={width:"100%",background:C.input,border:`1px solid ${C.border}`,borderRadius:"7px",padding:"8px 10px",color:C.text,fontSize:"12px",outline:"none",fontFamily:"inherit"};
   const L=({l,children,span})=><div style={{gridColumn:span?"1/-1":"auto"}}><label style={{fontSize:"9px",color:C.muted,fontWeight:"700",textTransform:"uppercase",letterSpacing:".07em",display:"block",marginBottom:"4px"}}>{l}</label>{children}</div>;
@@ -962,6 +962,7 @@ function AddEmployeeModal({depts,desig,onClose,onSave}){
           <L l="Department"><select value={f.dept} onChange={e=>{upd("dept",e.target.value);upd("designation",(desig[e.target.value]||[])[0]||"");}} style={s}>{depts.map(d=><option key={d}>{d}</option>)}</select></L>
           <L l="Designation"><select value={f.designation} onChange={e=>upd("designation",e.target.value)} style={s}>{(desig[f.dept]||[]).map(d=><option key={d}>{d}</option>)}</select></L>
           <L l="Branch"><select value={f.branch} onChange={e=>upd("branch",e.target.value)} style={s}>{["Lahore Main","Karachi","Islamabad","Faisalabad"].map(b=><option key={b}>{b}</option>)}</select></L>
+          <L l="City"><input value={f.city} onChange={e=>upd("city",e.target.value)} placeholder="e.g. Lahore" style={s}/></L>
           <L l="Employment Type"><select value={f.type} onChange={e=>upd("type",e.target.value)} style={s}>{["Permanent","Contractual","Probation","Part-time"].map(t=><option key={t}>{t}</option>)}</select></L>
           <L l="Join Date"><input type="date" value={f.join} onChange={e=>upd("join",e.target.value)} style={s}/></L>
           <L l="Date of Birth"><input type="date" value={f.dob} onChange={e=>upd("dob",e.target.value)} style={s}/></L>
@@ -974,7 +975,7 @@ function AddEmployeeModal({depts,desig,onClose,onSave}){
         </div>
         <div style={{padding:"14px 20px",borderTop:`1px solid ${C.border}`,display:"flex",gap:"8px"}}>
           <button onClick={onClose} style={{flex:1,padding:"10px",borderRadius:"8px",border:`1px solid ${C.border}`,background:"transparent",color:C.muted,cursor:"pointer",fontWeight:"600",fontSize:"12px"}}>Cancel</button>
-          <Btn color={C.green} disabled={!f.name||!f.cnic||!f.phone} onClick={handleSave}>✓ Add Employee</Btn>
+          <Btn color={C.green} disabled={!f.name||!f.cnic||!f.phone||!f.city} onClick={handleSave}>✓ Add Employee</Btn>
         </div>
       </div>
     </div>
