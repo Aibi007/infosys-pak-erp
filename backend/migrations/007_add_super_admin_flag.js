@@ -8,10 +8,12 @@ exports.up = async (knex) => {
   }
 
   // 2. Add is_super_admin to the tenant_users table for consistency
-  if (!await knex.schema.hasColumn('tenant_users', 'is_super_admin')) {
-    await knex.schema.table('tenant_users', (table) => {
-      table.boolean('is_super_admin').defaultTo(false);
-    });
+  if (await knex.schema.hasTable('tenant_users')) {
+    if (!await knex.schema.hasColumn('tenant_users', 'is_super_admin')) {
+      await knex.schema.table('tenant_users', (table) => {
+        table.boolean('is_super_admin').defaultTo(false);
+      });
+    }
   }
 
   // 3. Set the flag for the existing super admin
@@ -25,9 +27,11 @@ exports.down = async (knex) => {
       table.dropColumn('is_super_admin');
     });
   }
-  if (await knex.schema.hasColumn('tenant_users', 'is_super_admin')) {
-    await knex.schema.table('tenant_users', (table) => {
-      table.dropColumn('is_super_admin');
-    });
+  if (await knex.schema.hasTable('tenant_users')) {
+    if (await knex.schema.hasColumn('tenant_users', 'is_super_admin')) {
+      await knex.schema.table('tenant_users', (table) => {
+        table.dropColumn('is_super_admin');
+      });
+    }
   }
 };
