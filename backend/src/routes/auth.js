@@ -84,7 +84,7 @@ const user = await publicDb.queryOne(
   `SELECT id, email, password_hash, full_name, full_name_ur,
           is_super_admin, is_active, tenant_id,
           login_attempts, locked_until
-   FROM public.users WHERE email = ?`, // Yahan 'public.users' kar diya
+   FROM public.users WHERE email = $1`, // Yahan 'public.users' kar diya
   [email.toLowerCase()]
 );
 
