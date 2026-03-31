@@ -1,0 +1,110 @@
+'use strict';
+require('dotenv').config();
+const knex   = require('knex');
+const logger = require('../src/utils/logger');
+
+// ── Connection config ───────────────────────────────────────────
+const baseConfig = {
+  client: 'mysql2',
+  connection: {
+    host:     process.env.MYSQLHOST            || 'mysql.railway.internal',
+    port:     parseInt(process.env.MYSQLPORT)    || 3306,
+    database: process.env.MYSQLDATABASE        || 'railway',
+    user:     process.env.MYSQLUSER            || 'root',
+    password: process.env.MYSQLPASSWORD        || 'obxoZjlUhneIkwMGfmLxEoKcuagZdapM',
+  },
+  pool: {
+    min:            parseInt(process.env.DB_POOL_MIN) || 2,
+    max:            parseInt(process.env.DB_POOL_MAX) || 20,
+    acquireTimeoutMillis: 30000,
+    idleTimeoutMillis:    600000,
+    reapIntervalMillis:   1000,
+    afterCreate: (conn, done) => {
+      conn.query('SET SESSION max_execution_time = 30000;', (err) => done(err, conn));
+    },
+  },
+  migrations: {
+    directory: './migrations',
+    tableName:  'knex_migrations',
+  },
+  seeds: {
+    directory: './seeds',
+  },
+  debug: process.env.NODE_ENV === 'development',
+};
+
+function patchDb(k) {
+  const fixSql = (sql) => (typeof sql === 'string' ? sql.replace(/\$\d+/g, '?') : sql);
+
+  k.query = async (text, params) => {
+    const res = await k.raw(fixSql(text), params || []);
+    return res[0];
+  };
+  k.queryOne = async (text, params) => {
+    const res = await k.raw(fixSql(text), params || []);
+    return res[0][0];
+  };
+  k.queryAll = async (text, params) => {
+    const res = await k.raw(fixSql(text), params || []);
+    return res[0];
+  };
+  k.execute = async (text, params) => {
+    return await k.raw(fixSql(text), params || []);
+  };
+  k.paginate = async (sql, params, { page = 1, limit = 10 }) => {
+    const offset = (page - 1) * limit;
+    const countSql = `SELECT COUNT(*) AS count FROM (${fixSql(sql)}) AS count_query`;
+    const dataSql  = `${fixSql(sql)} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
+
+    const [countRes, dataRes] = await Promise.all([
+      k.raw(countSql, params || []),
+      k.raw(dataSql, params || [])
+    ]);
+
+    const total = parseInt(countRes[0][0].count);
+    return {
+      data: dataRes[0],
+      pagination: {
+        total, page: parseInt(page), limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  };
+  return k;
+}
+
+const db = patchDb(knex(baseConfig));
+
+const tenantConnections = new Map();
+
+function getTenantDb(tenantSlug) {
+  if (!tenantSlug) throw new Error('Tenant slug required');
+  return db;
+}
+
+async function checkConnection() {
+  try {
+    await db.raw('SELECT 1');
+    logger.info('✅ Database connected successfully');
+    return true;
+  } catch (err) {
+    logger.error(`❌ Database connection failed: ${err.message}`);
+    return false;
+  }
+}
+
+async function destroyConnections() {
+  await db.destroy();
+  tenantConnections.clear();
+  logger.info('Database connections closed');
+}
+
+module.exports = { 
+  db, 
+  publicDb: db, 
+  getTenantDb, 
+  getTenantDB: getTenantDb, 
+  checkConnection, 
+  destroyConnections, 
+  baseConfig 
+};
