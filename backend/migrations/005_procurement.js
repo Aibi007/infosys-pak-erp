@@ -44,7 +44,7 @@ exports.up = async (knex) => {
       t.uuid('warehouse_id').references('id').inTable('warehouses').onDelete('SET NULL');
       t.uuid('created_by').references('id').inTable('users');
       t.uuid('approved_by').references('id').inTable('users');
-      t.date('order_date').notNullable().defaultTo(knex.fn.now());
+      t.date('order_date').notNullable();
       t.date('expected_date');
       t.date('approved_at');
       t.string('status', 20).defaultTo('draft');
@@ -90,7 +90,7 @@ exports.up = async (knex) => {
       t.uuid('vendor_id').references('id').inTable('vendors').onDelete('SET NULL');
       t.uuid('warehouse_id').references('id').inTable('warehouses').onDelete('SET NULL');
       t.uuid('received_by').references('id').inTable('users');
-      t.date('received_date').notNullable().defaultTo(knex.fn.now());
+      t.date('received_date').notNullable();
       t.string('status', 20).defaultTo('complete');
       t.decimal('total_value', 18, 2).defaultTo(0);
       t.text('notes');

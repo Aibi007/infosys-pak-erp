@@ -41,7 +41,7 @@ exports.up = async (knex) => {
       t.uuid('branch_id').references('id').inTable('branches').onDelete('SET NULL');
       t.uuid('warehouse_id').references('id').inTable('warehouses').onDelete('SET NULL');
       t.uuid('created_by').references('id').inTable('users');
-      t.date('invoice_date').notNullable().defaultTo(knex.fn.now());
+      t.date('invoice_date').notNullable();
       t.date('due_date');
       t.string('status', 20).notNullable().defaultTo('draft');
       t.string('payment_status', 20).defaultTo('unpaid');
@@ -98,7 +98,7 @@ exports.up = async (knex) => {
       t.uuid('vendor_id');
       t.uuid('invoice_id').references('id').inTable('invoices').onDelete('SET NULL');
       t.uuid('account_id').references('id').inTable('accounts').onDelete('RESTRICT');
-      t.date('payment_date').notNullable().defaultTo(knex.fn.now());
+      t.date('payment_date').notNullable();
       t.string('payment_mode', 50).notNullable();
       t.decimal('amount', 18, 2).notNullable();
       t.string('reference_no', 100);
