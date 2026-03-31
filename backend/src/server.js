@@ -96,32 +96,25 @@ app.use(errorHandler);
 
 // Database setup on boot
 async function setupDatabase() {
-  logger.info('[BOOT] Checking database schema...');
+  logger.info('[BOOT] Ensuring super admin exists...');
   try {
-    const result = await db.raw("SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'users'");
-    const hasUsers = result[0].length > 0;
-
-    if (!hasUsers) {
-      logger.info('[BOOT] Running initial migration...');
-      const sql = fs.readFileSync(path.join(__dirname, '../db/001_tenants_and_auth.sql'), 'utf8');
-      await db.raw(sql);
-    }
-
-    // Ensure admin user exists
     const adminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@erp.pk';
     const adminPass  = process.env.SUPER_ADMIN_PASSWORD || 'Admin@123';
     const hash = await bcrypt.hash(adminPass, 12);
 
-    const admin = await db.raw('SELECT id FROM users WHERE email = ?', [adminEmail]);
-    if (admin[0].length > 0) {
-      await db.raw('UPDATE users SET password_hash = ?, is_active = TRUE WHERE email = ?', [hash, adminEmail]);
-      logger.info(`[BOOT] Admin password reset: ${adminEmail}`);
+    // Check if the admin exists in the 'super_admins' table
+    const adminResult = await db.raw('SELECT id FROM super_admins WHERE email = ?', [adminEmail]);
+    const adminExists = adminResult[0] && adminResult[0].length > 0;
+
+    if (adminExists) {
+      await db.raw('UPDATE super_admins SET password_hash = ?, is_active = TRUE WHERE email = ?', [hash, adminEmail]);
+      logger.info(`[BOOT] Super admin password updated: ${adminEmail}`);
     } else {
       await db.raw(
-        "INSERT INTO users (email, password_hash, full_name, is_super_admin, is_active) VALUES (?, ?, 'Super Admin', TRUE, TRUE)",
+        "INSERT INTO super_admins (email, password_hash, name, is_active) VALUES (?, ?, 'Super Admin', TRUE)",
         [adminEmail, hash]
       );
-      logger.info(`[BOOT] Admin created: ${adminEmail}`);
+      logger.info(`[BOOT] Super admin created: ${adminEmail}`);
     }
   } catch (err) {
     logger.error(`[BOOT] DB setup error: ${err.message}`);
