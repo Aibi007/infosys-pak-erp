@@ -37,28 +37,7 @@ const app    = express();
 const PREFIX = process.env.API_PREFIX || '/api/v1';
 
 app.use(helmet({ contentSecurityPolicy: false }));
-
-const whitelist = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://infosys-pak-erp-eight.vercel.app'
-];
-
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (whitelist.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Slug, X-Request-ID, apikey');
-  res.header('Access-Control-Allow-Credentials', true);
-
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-
-  next();
-});
+app.use(cors());
 
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
