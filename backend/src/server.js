@@ -44,21 +44,21 @@ const whitelist = [
   'https://infosys-pak-erp-eight.vercel.app'
 ];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (whitelist.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','X-Tenant-Slug','X-Request-ID','apikey'],
-};
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (whitelist.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Slug, X-Request-ID, apikey');
+  res.header('Access-Control-Allow-Credentials', true);
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
 
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
