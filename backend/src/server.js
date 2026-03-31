@@ -98,6 +98,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // PUBLIC ROUTES & HEALTH CHECKS
 // -------------------------------------------------------------------
 
+app.get('/', (_req, res) => {
+  res.status(200).json({ message: 'API is running.' });
+});
+
 app.get('/health', async (_req, res) => {
   const dbOk = await checkConnection().catch(() => false);
   res.status(dbOk ? 200 : 503).json({ status: dbOk ? 'healthy' : 'degraded', timestamp: new Date().toISOString() });
