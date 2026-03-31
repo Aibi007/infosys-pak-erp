@@ -8,6 +8,7 @@
   restartPolicyMaxRetries = 10
 
 [env]
+  NODE_ENV = "production"
   JWT_SECRET = "a-secure-secret-for-production"
   BCRYPT_ROUNDS = "12"
   JWT_ACCESS_EXPIRES = "900"
