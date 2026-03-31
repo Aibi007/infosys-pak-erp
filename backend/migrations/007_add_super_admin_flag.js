@@ -1,25 +1,25 @@
 
 exports.up = async (knex) => {
   // 1. Add is_super_admin flag to public users table
-  await knex.schema.withSchema('public').table('users', (table) => {
+  await knex.schema.table('users', (table) => {
     table.boolean('is_super_admin').defaultTo(false);
   });
 
   // 2. Add is_super_admin to the tenant_users table for consistency
-  await knex.schema.withSchema('public').table('tenant_users', (table) => {
+  await knex.schema.table('tenant_users', (table) => {
     table.boolean('is_super_admin').defaultTo(false);
   });
 
   // 3. Set the flag for the existing super admin
   const adminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@erp.pk';
-  await knex('users').withSchema('public').where({ email: adminEmail }).update({ is_super_admin: true });
+  await knex('users').where({ email: adminEmail }).update({ is_super_admin: true });
 };
 
 exports.down = async (knex) => {
-  await knex.schema.withSchema('public').table('users', (table) => {
+  await knex.schema.table('users', (table) => {
     table.dropColumn('is_super_admin');
   });
-  await knex.schema.withSchema('public').table('tenant_users', (table) => {
+  await knex.schema.table('tenant_users', (table) => {
     table.dropColumn('is_super_admin');
   });
 };
