@@ -1,4 +1,136 @@
-# 🏢 Infosys Pak ERP
+2026-03-31T11:57:08.360019825Z [inf]  Starting Container
+2026-03-31T11:57:08.669035085Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:08.669038945Z [inf]  
+2026-03-31T11:57:08.669042273Z [inf]  > infosys-pak-erp-backend@1.0.0 migrate
+2026-03-31T11:57:08.669045469Z [inf]  > knex migrate:latest
+2026-03-31T11:57:08.669049214Z [inf]  
+2026-03-31T11:57:08.669052456Z [inf]  Already up to date
+2026-03-31T11:57:08.669055202Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:08.669058290Z [inf]  
+2026-03-31T11:57:08.669061260Z [inf]  > infosys-pak-erp-backend@1.0.0 start
+2026-03-31T11:57:08.669064854Z [inf]  > npm run migrate && node src/server.js
+2026-03-31T11:57:08.669067702Z [inf]  
+2026-03-31T11:57:08.669070747Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:08.669073957Z [inf]  
+2026-03-31T11:57:08.669076971Z [inf]  > infosys-pak-erp-backend@1.0.0 migrate
+2026-03-31T11:57:08.669079768Z [inf]  > knex migrate:latest
+2026-03-31T11:57:08.669082643Z [inf]  
+2026-03-31T11:57:08.669085344Z [inf]  Already up to date
+2026-03-31T11:57:08.669088210Z [err]  /app/src/server.js:41
+2026-03-31T11:57:08.669091018Z [err]  const PREFIX = CONCAT(process.env.API_PREFIX, '/api/v1');
+2026-03-31T11:57:08.669093774Z [err]                 ^
+2026-03-31T11:57:08.669096551Z [err]  
+2026-03-31T11:57:08.669099402Z [err]  ReferenceError: CONCAT is not defined
+2026-03-31T11:57:08.669102005Z [err]      at Object.<anonymous> (/app/src/server.js:41:16)
+2026-03-31T11:57:08.669104649Z [err]      at Module._compile (node:internal/modules/cjs/loader:1546:14)
+2026-03-31T11:57:08.669107249Z [err]      at Object..js (node:internal/modules/cjs/loader:1689:10)
+2026-03-31T11:57:08.669109886Z [err]      at Module.load (node:internal/modules/cjs/loader:1318:32)
+2026-03-31T11:57:08.669112506Z [err]      at Function._load (node:internal/modules/cjs/loader:1128:12)
+2026-03-31T11:57:08.669115304Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:315:14)
+2026-03-31T11:57:08.669414904Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:218:24)
+2026-03-31T11:57:08.669418234Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+2026-03-31T11:57:08.669421453Z [err]      at node:internal/main/run_main_module:36:49
+2026-03-31T11:57:08.669424911Z [err]  
+2026-03-31T11:57:08.669428575Z [err]  Node.js v22.11.0
+2026-03-31T11:57:10.098718948Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:10.117778685Z [inf]  
+2026-03-31T11:57:10.117783915Z [inf]  > infosys-pak-erp-backend@1.0.0 migrate
+2026-03-31T11:57:10.117787260Z [inf]  > knex migrate:latest
+2026-03-31T11:57:10.117790320Z [inf]  
+2026-03-31T11:57:10.717268249Z [inf]  
+2026-03-31T11:57:10.717275775Z [inf]  Already up to date
+2026-03-31T11:57:10.717280957Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:10.717284146Z [inf]  
+2026-03-31T11:57:10.717287616Z [inf]  > infosys-pak-erp-backend@1.0.0 start
+2026-03-31T11:57:10.717302638Z [inf]  > npm run migrate && node src/server.js
+2026-03-31T11:57:10.717312511Z [inf]  
+2026-03-31T11:57:10.717317487Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:10.717321705Z [inf]  
+2026-03-31T11:57:10.717326548Z [inf]  > infosys-pak-erp-backend@1.0.0 migrate
+2026-03-31T11:57:10.717331360Z [inf]  > knex migrate:latest
+2026-03-31T11:57:10.838643570Z [inf]  Already up to date
+2026-03-31T11:57:11.132565318Z [err]  Node.js v22.11.0
+2026-03-31T11:57:11.132636268Z [err]  /app/src/server.js:41
+2026-03-31T11:57:11.132640066Z [err]  const PREFIX = CONCAT(process.env.API_PREFIX, '/api/v1');
+2026-03-31T11:57:11.132643023Z [err]                 ^
+2026-03-31T11:57:11.132647304Z [err]  
+2026-03-31T11:57:11.132650656Z [err]  ReferenceError: CONCAT is not defined
+2026-03-31T11:57:11.132653633Z [err]      at Object.<anonymous> (/app/src/server.js:41:16)
+2026-03-31T11:57:11.132656570Z [err]      at Module._compile (node:internal/modules/cjs/loader:1546:14)
+2026-03-31T11:57:11.132660100Z [err]      at Object..js (node:internal/modules/cjs/loader:1689:10)
+2026-03-31T11:57:11.132662912Z [err]      at Module.load (node:internal/modules/cjs/loader:1318:32)
+2026-03-31T11:57:11.132666046Z [err]      at Function._load (node:internal/modules/cjs/loader:1128:12)
+2026-03-31T11:57:11.132668911Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:315:14)
+2026-03-31T11:57:11.132672008Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:218:24)
+2026-03-31T11:57:11.132675015Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+2026-03-31T11:57:11.132678272Z [err]      at node:internal/main/run_main_module:36:49
+2026-03-31T11:57:11.132681653Z [err]  
+2026-03-31T11:57:13.095877174Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:13.098275291Z [inf]  
+2026-03-31T11:57:13.098281355Z [inf]  > infosys-pak-erp-backend@1.0.0 migrate
+2026-03-31T11:57:13.098284333Z [inf]  > knex migrate:latest
+2026-03-31T11:57:13.098287376Z [inf]  
+2026-03-31T11:57:13.739541761Z [inf]  
+2026-03-31T11:57:13.739553636Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:13.739558795Z [inf]  Already up to date
+2026-03-31T11:57:13.739567040Z [inf]  
+2026-03-31T11:57:13.739572051Z [inf]  > infosys-pak-erp-backend@1.0.0 start
+2026-03-31T11:57:13.739586564Z [inf]  > npm run migrate && node src/server.js
+2026-03-31T11:57:13.793383773Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:13.814260005Z [inf]  
+2026-03-31T11:57:13.814265428Z [inf]  > infosys-pak-erp-backend@1.0.0 migrate
+2026-03-31T11:57:13.814270211Z [inf]  > knex migrate:latest
+2026-03-31T11:57:13.814274198Z [inf]  
+2026-03-31T11:57:14.058200360Z [inf]  Already up to date
+2026-03-31T11:57:14.312843524Z [err]  /app/src/server.js:41
+2026-03-31T11:57:14.312847108Z [err]  const PREFIX = CONCAT(process.env.API_PREFIX, '/api/v1');
+2026-03-31T11:57:14.312850147Z [err]                 ^
+2026-03-31T11:57:14.312853691Z [err]  
+2026-03-31T11:57:14.312856782Z [err]  ReferenceError: CONCAT is not defined
+2026-03-31T11:57:14.312859945Z [err]      at Object.<anonymous> (/app/src/server.js:41:16)
+2026-03-31T11:57:14.312863541Z [err]      at Module._compile (node:internal/modules/cjs/loader:1546:14)
+2026-03-31T11:57:14.312867621Z [err]      at Object..js (node:internal/modules/cjs/loader:1689:10)
+2026-03-31T11:57:14.312870671Z [err]      at Module.load (node:internal/modules/cjs/loader:1318:32)
+2026-03-31T11:57:14.312875242Z [err]      at Function._load (node:internal/modules/cjs/loader:1128:12)
+2026-03-31T11:57:14.312878719Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:315:14)
+2026-03-31T11:57:14.312881603Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:218:24)
+2026-03-31T11:57:14.312885095Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+2026-03-31T11:57:14.312888445Z [err]      at node:internal/main/run_main_module:36:49
+2026-03-31T11:57:14.312891648Z [err]  
+2026-03-31T11:57:14.312894887Z [err]  Node.js v22.11.0
+2026-03-31T11:57:15.658126872Z [inf]  
+2026-03-31T11:57:15.658151287Z [inf]  > infosys-pak-erp-backend@1.0.0 migrate
+2026-03-31T11:57:15.658159106Z [inf]  > knex migrate:latest
+2026-03-31T11:57:15.658162388Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:15.658167973Z [inf]  
+2026-03-31T11:57:15.831477169Z [inf]  Already up to date
+2026-03-31T11:57:15.917620132Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:15.937516400Z [inf]  
+2026-03-31T11:57:15.937525203Z [inf]  > infosys-pak-erp-backend@1.0.0 start
+2026-03-31T11:57:15.937530850Z [inf]  > npm run migrate && node src/server.js
+2026-03-31T11:57:15.937537434Z [inf]  
+2026-03-31T11:57:16.029046789Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-03-31T11:57:16.046880323Z [inf]  
+2026-03-31T11:57:16.046887414Z [inf]  > infosys-pak-erp-backend@1.0.0 migrate
+2026-03-31T11:57:16.046891086Z [inf]  > knex migrate:latest
+2026-03-31T11:57:16.046894347Z [inf]  
+2026-03-31T11:57:16.301277834Z [inf]  Already up to date
+2026-03-31T11:57:16.720802739Z [err]      at node:internal/main/run_main_module:36:49
+2026-03-31T11:57:16.720809459Z [err]  
+2026-03-31T11:57:16.720811231Z [err]      at TracingChannel.traceSync (node:diagnostics_channel:315:14)
+2026-03-31T11:57:16.720815368Z [err]  Node.js v22.11.0
+2026-03-31T11:57:16.720818077Z [err]      at wrapModuleLoad (node:internal/modules/cjs/loader:218:24)
+2026-03-31T11:57:16.720823968Z [err]      at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+2026-03-31T11:57:16.720824622Z [err]  
+2026-03-31T11:57:16.720835784Z [err]  ReferenceError: CONCAT is not defined
+2026-03-31T11:57:16.720843680Z [err]  /app/src/server.js:41
+2026-03-31T11:57:16.720845372Z [err]      at Module._compile (node:internal/modules/cjs/loader:1546:14)
+2026-03-31T11:57:16.720846331Z [err]      at Object.<anonymous> (/app/src/server.js:41:16)
+2026-03-31T11:57:16.720850111Z [err]  const PREFIX = CONCAT(process.env.API_PREFIX, '/api/v1');
+2026-03-31T11:57:16.720855255Z [err]      at Object..js (node:internal/modules/cjs/loader:1689:10)
+2026-03-31T11:57:16.720855487Z [err]                 ^
+2026-03-31T11:57:16.720860652Z [err]      at Module.load (node:internal/modules/cjs/loader:1318:32)
+2026-03-31T11:57:16.720865144Z [err]      at Function._load (node:internal/modules/cjs/loader:1128:12)# 🏢 Infosys Pak ERP
 
 **A complete ERP system for Pakistani businesses — FBR compliant, multi-tenant, bilingual (English + اردو)**
 

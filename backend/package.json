@@ -4,7 +4,7 @@
   "private": true,
   "main": "src/server.js",
   "scripts": {
-    "start": "npm run migrate && node src/server.js",
+    "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "migrate": "knex migrate:latest",
     "test": "jest --runInBand"
