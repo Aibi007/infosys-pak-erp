@@ -98,8 +98,8 @@ app.use(errorHandler);
 async function setupDatabase() {
   logger.info('[BOOT] Checking database schema...');
   try {
-    const result = await db.raw("SELECT to_regclass('public.users') as tbl");
-    const hasUsers = result.rows[0].tbl;
+    const result = await db.raw("SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'users'");
+    const hasUsers = result[0].length > 0;
 
     if (!hasUsers) {
       logger.info('[BOOT] Running initial migration...');
@@ -112,13 +112,13 @@ async function setupDatabase() {
     const adminPass  = process.env.SUPER_ADMIN_PASSWORD || 'Admin@123';
     const hash = await bcrypt.hash(adminPass, 12);
 
-    const admin = await db.raw('SELECT id FROM public.users WHERE email = ?', [adminEmail]);
-    if (admin.rows.length > 0) {
-      await db.raw('UPDATE public.users SET password_hash = ?, is_active = TRUE WHERE email = ?', [hash, adminEmail]);
+    const admin = await db.raw('SELECT id FROM users WHERE email = ?', [adminEmail]);
+    if (admin[0].length > 0) {
+      await db.raw('UPDATE users SET password_hash = ?, is_active = TRUE WHERE email = ?', [hash, adminEmail]);
       logger.info(`[BOOT] Admin password reset: ${adminEmail}`);
     } else {
       await db.raw(
-        "INSERT INTO public.users (email, password_hash, full_name, is_super_admin, is_active) VALUES (?, ?, 'Super Admin', TRUE, TRUE) ON CONFLICT (email) DO NOTHING",
+        "INSERT INTO users (email, password_hash, full_name, is_super_admin, is_active) VALUES (?, ?, 'Super Admin', TRUE, TRUE)",
         [adminEmail, hash]
       );
       logger.info(`[BOOT] Admin created: ${adminEmail}`);
