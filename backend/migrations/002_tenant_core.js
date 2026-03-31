@@ -32,7 +32,7 @@ exports.up = async (knex) => {
       t.string('phone', 30);
       t.string('role', 30).notNullable().defaultTo('cashier');
       // roles: admin | manager | accountant | cashier | hr | viewer
-      t.json('permissions').defaultTo('[]');
+      t.json('permissions');
       t.string('language', 10).defaultTo('en');
       t.boolean('is_active').defaultTo(true);
       t.timestamp('last_login_at');
