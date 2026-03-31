@@ -1,6 +1,7 @@
 
 'use strict';
 require('dotenv').config();
+// Trivial change to force redeployment
 
 // Ensure a JWT secret is set, otherwise auth will fail
 if (!process.env.JWT_SECRET) {
