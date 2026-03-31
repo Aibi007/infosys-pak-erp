@@ -154,17 +154,21 @@ async function setupDatabase() {
   try {
     const adminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@erp.pk';
     const adminPass  = process.env.SUPER_ADMIN_PASSWORD || 'Admin@123';
-    const hash = await bcrypt.hash(adminPass, 12);
+    const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12');
+    const hash = await bcrypt.hash(adminPass, BCRYPT_ROUNDS);
 
-    const adminResult = await db.raw('SELECT id FROM super_admins WHERE email = ?', [adminEmail]);
+    const adminResult = await db.raw('SELECT id FROM users WHERE email = ? AND is_super_admin = TRUE', [adminEmail]);
     const adminExists = adminResult[0] && adminResult[0].length > 0;
 
     if (adminExists) {
-      await db.raw('UPDATE super_admins SET password_hash = ?, is_active = TRUE WHERE email = ?', [hash, adminEmail]);
+      await db.raw(
+        'UPDATE users SET password_hash = ?, is_active = TRUE WHERE id = ?',
+        [hash, adminResult[0][0].id]
+      );
       logger.info(`[BOOT] Super admin password updated: ${adminEmail}`);
     } else {
       await db.raw(
-        "INSERT INTO super_admins (email, password_hash, name, is_active) VALUES (?, ?, 'Super Admin', TRUE)",
+        "INSERT INTO users (email, password_hash, full_name, is_active, is_super_admin, tenant_id) VALUES (?, ?, 'Super Admin', TRUE, TRUE, NULL)",
         [adminEmail, hash]
       );
       logger.info(`[BOOT] Super admin created: ${adminEmail}`);
