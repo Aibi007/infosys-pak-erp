@@ -246,7 +246,7 @@ function Dashboard({navigate}) {
               <div style={{fontSize:"13px",fontWeight:"700",color:C.text,marginBottom:"12px"}}>{title}</div>
               {labels.map((l,i)=>(
                 <div key={l} onClick={()=>navigate(ids[i])} style={{padding:"8px 10px",borderRadius:"6px",marginBottom:"4px",cursor:"pointer",color:C.muted,fontSize:"12px",display:"flex",alignItems:"center",gap:"8px"}}
-                  onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
+                  onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}}>
                   → {l}
                 </div>
               ))}
@@ -286,7 +286,7 @@ function Products() {
               </tr></thead>
               <tbody>
                 {products.map(p=>(
-                  <tr key={p.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
+                  <tr key={p.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}}>
                     <td style={{padding:"10px 12px",color:C.muted,fontFamily:"monospace"}}>{p.sku}</td>
                     <td style={{padding:"10px 12px",color:C.text,fontWeight:"600"}}>{p.name}</td>
                     <td style={{padding:"10px 12px",color:C.muted}}>{p.category_name||"—"}</td>
@@ -340,7 +340,7 @@ function Customers() {
               </tr></thead>
               <tbody>
                 {customers.map(c=>(
-                  <tr key={c.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
+                  <tr key={c.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}}>
                     <td style={{padding:"10px 12px",color:C.text,fontWeight:"600"}}>{c.name}</td>
                     <td style={{padding:"10px 12px",color:C.muted}}>{c.phone||"—"}</td>
                     <td style={{padding:"10px 12px",color:C.muted}}>{c.city||"—"}</td>
@@ -390,7 +390,7 @@ function Invoices() {
               </tr></thead>
               <tbody>
                 {invoices.map(inv=>(
-                  <tr key={inv.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
+                  <tr key={inv.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}}>
                     <td style={{padding:"10px 12px",color:C.accent,fontWeight:"700"}}>{inv.invoice_number||inv.id?.slice(0,8)}</td>
                     <td style={{padding:"10px 12px",color:C.text}}>{inv.customer_name||"Walk-in"}</td>
                     <td style={{padding:"10px 12px",color:C.muted}}>{inv.created_at?.slice(0,10)||"—"}</td>
@@ -511,6 +511,21 @@ export default function InfosysPakERP() {
   const navigate = r => setRoute(r);
   const onLogin  = u => { setUser(u); localStorage.setItem("user",JSON.stringify(u)); setRoute("dashboard"); };
   const onLogout = () => { setUser(null); localStorage.removeItem("token"); localStorage.removeItem("user"); };
+
+  useEffect(() => {
+    const autoLogin = async () => {
+      if (!user) {
+        try {
+          const r = await apiFetch("/auth/login", { method:"POST", body:{email: "admin@erp.pk", password: "Admin@123", tenantSlug: "admin"} });
+          localStorage.setItem("token", r.data.accessToken);
+          onLogin(r.data.user);
+        } catch (e) {
+          console.error("Auto-login failed:", e);
+        }
+      }
+    };
+    autoLogin();
+  }, [user]);
 
   if(!user) return <LoginScreen onLogin={onLogin}/>;
 
