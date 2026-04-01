@@ -90,7 +90,14 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
       tenant: { slug: 'default', companyName: 'Infosys Pak ERP' },
     }, 'Login successful');
 
-  } catch (err) { next(err); }
+  } catch (err) { 
+    logger.error('Login error', { 
+      error: err, 
+      stack: err.stack, 
+      email: req.body.email 
+    });
+    next(err); 
+  }
 });
 
 // ── POST /refresh ─────────────────────────────────────────────
