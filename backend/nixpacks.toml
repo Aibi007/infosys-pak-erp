@@ -1,2 +1,6 @@
+
+[phases.setup]
+pkgs = ["git"]
+
 [phases.install]
 cmds = ["npm install --legacy-peer-deps"]
