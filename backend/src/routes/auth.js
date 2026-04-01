@@ -1,23 +1,24 @@
 'use strict';
-// src/routes/auth.js — PostgreSQL version
-const router  = require('express').Router();
-const bcrypt  = require('bcryptjs');
-const jwt     = require('jsonwebtoken');
-const { z }   = require('zod');
+// src/routes/auth.js — PostgreSQL version - Revised for Correct Tenant Logic
+const router = require('express').Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { z } = require('zod');
 
-const { db, publicDb }  = require('../../config/database');
-const { authenticate }  = require('../middleware/auth');
-const validate          = require('../middleware/validate');
+const { publicDb } = require('../../config/database');
+const { authenticate } = require('../middleware/auth');
+const validate = require('../middleware/validate');
 const { ok, unauthorized, badRequest } = require('../utils/response');
-const logger            = require('../utils/logger');
+const logger = require('../utils/logger');
 
-const JWT_SECRET  = process.env.JWT_SECRET || 'fallback_secret';
-const JWT_EXPIRES = parseInt(process.env.JWT_ACCESS_EXPIRES_SECONDS || '900');
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+const JWT_EXPIRES = parseInt(process.env.JWT_ACCESS_EXPIRES_SECONDS || '900', 10);
+const JWT_REFRESH_EXPIRES = '30d';
 
 const loginSchema = z.object({
-  email:      z.string().email(),
-  password:   z.string().min(1),
-  tenantSlug: z.string().optional(),
+  email: z.string().email('Invalid email format.'),
+  password: z.string().min(1, 'Password cannot be empty.'),
+  tenantSlug: z.string().min(1, 'Company slug is required.'),
 });
 const refreshSchema = z.object({ refreshToken: z.string().min(10) });
 const changePasswordSchema = z.object({
@@ -25,82 +26,105 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(8).regex(/[A-Z]/).regex(/[0-9]/),
 });
 
+
 // ── POST /login ───────────────────────────────────────────────
 router.post('/login', validate(loginSchema), async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password, tenantSlug } = req.body;
+  const emailLower = email.toLowerCase();
+  
   try {
-    const emailLower = email.toLowerCase();
-
-    // 1. Fetch user from the single 'users' table
-    const user = await publicDb.queryOne(
-      `SELECT id, email, password_hash, name, role, permissions, is_active, is_super_admin, tenant_id FROM users WHERE email = $1`,
-      [emailLower]
+    // 1. Fetch Tenant and User data together for efficiency and atomicity.
+    const userAndTenant = await publicDb.queryOne(
+      `SELECT 
+         u.id, u.email, u.password_hash, u.name, u.role, u.permissions, u.is_active, u.is_super_admin,
+         t.id as tenant_id, t.name as tenant_name, t.slug as tenant_slug, t.is_active as tenant_is_active
+       FROM users u
+       JOIN tenants t ON u.tenant_id = t.id
+       WHERE u.email = $1 AND t.slug = $2`,
+      [emailLower, tenantSlug]
     );
 
-    const dummyHash = '$2a$12$invalidhashinvalidhashinvalidhash';
-    const passwordOk = await bcrypt.compare(password, user?.password_hash || dummyHash);
+    // Use a dummy hash to prevent timing attacks if user/tenant combo is not found
+    const dummyHash = '$2a$12$invalidhashinvalidhashinvalidhash.';
+    const passwordOk = await bcrypt.compare(password, userAndTenant?.password_hash || dummyHash);
 
-    if (!user || !passwordOk) {
-      return unauthorized(res, 'Invalid email or password');
+    if (!userAndTenant || !passwordOk) {
+      return unauthorized(res, 'Invalid company slug, email, or password.');
+    }
+    
+    const { id, name, role, permissions, is_active, is_super_admin, tenant_id, tenant_name, tenant_slug, tenant_is_active } = userAndTenant;
+
+    // 2. Check for active status
+    if (!is_active) {
+      return unauthorized(res, 'Your account is deactivated.');
+    }
+    if (!tenant_is_active) {
+      return unauthorized(res, 'The company account is inactive.');
     }
 
-    if (!user.is_active) {
-      return unauthorized(res, 'Account is deactivated');
-    }
+    // 3. Prepare payload and sign tokens
+    const payload = {
+      userId: id,
+      email: emailLower,
+      role: role,
+      tenantId: tenant_id,
+      tenantSlug: tenant_slug,
+      isSuperAdmin: is_super_admin,
+    };
 
-    // 2. Handle Super Admin Login
-    if (user.is_super_admin) {
-      const accessToken  = jwt.sign(
-        { userId: user.id, email: user.email, role: 'admin', tenantSlug: 'admin', isSuperAdmin: true },
-        JWT_SECRET, { expiresIn: JWT_EXPIRES }
-      );
-      const refreshToken = jwt.sign({ userId: user.id, type: 'super_admin' }, JWT_SECRET, { expiresIn: '30d' });
-      
-      await publicDb.execute(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [user.id]);
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+    const refreshToken = jwt.sign({ userId: id, type: 'auth' }, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES });
 
-      logger.info('Super admin logged in', { email: user.email });
-      return ok(res, {
-        accessToken, refreshToken, expiresIn: JWT_EXPIRES,
-        user: { id: user.id, email: user.email, name: user.name, role: 'admin', permissions: ['*'], isSuperAdmin: true },
-        tenant: { slug: 'admin', companyName: 'Infosys Pak ERP' },
-      }, 'Login successful');
-    }
-
-    // 3. Handle Regular User Login
-    let permissions = [];
-    try { 
-      permissions = user.permissions ? (typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions) : []; 
-    } catch (e) {}
-    if (user.role === 'admin') permissions = ['*'];
-
-    const accessToken  = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role, tenantSlug: user.tenant_id },
-      JWT_SECRET, { expiresIn: JWT_EXPIRES }
-    );
-    const refreshToken = jwt.sign({ userId: user.id, type: 'user' }, JWT_SECRET, { expiresIn: '30d' });
-    await publicDb.execute(
+    // 4. Update last login time and refresh token asynchronously
+    publicDb.execute(
       `UPDATE users SET refresh_token_hash = $1, last_login_at = NOW() WHERE id = $2`,
-      [refreshToken, user.id]
-    );
+      [refreshToken, id]
+    ).catch(err => logger.error('Failed to update refresh token on login', { userId: id, error: err }));
 
-    logger.info('User logged in', { userId: user.id, email: user.email, tenant: user.tenant_id });
+    // 5. Prepare user permissions
+    let userPermissions = [];
+    if (is_super_admin || role === 'admin') {
+        userPermissions = ['*'];
+    } else {
+        try {
+            userPermissions = permissions ? JSON.parse(permissions) : [];
+        } catch (e) {
+            logger.warn('Failed to parse user permissions JSON', { userId: id });
+            userPermissions = [];
+        }
+    }
+
+    logger.info('User logged in successfully', { userId: id, tenant: tenant_slug });
+
+    // 6. Send successful response
     return ok(res, {
-      accessToken, refreshToken, expiresIn: JWT_EXPIRES,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, permissions, isSuperAdmin: false },
-      tenant: { slug: user.tenant_id, companyName: 'Infosys Pak ERP' }, // Assuming tenant info is fetched elsewhere
+      accessToken,
+      refreshToken,
+      expiresIn: JWT_EXPIRES,
+      user: {
+        id: id,
+        email: emailLower,
+        name: name,
+        role: role,
+        permissions: userPermissions,
+        isSuperAdmin: is_super_admin,
+      },
+      tenant: {
+        slug: tenant_slug,
+        companyName: tenant_name,
+      },
     }, 'Login successful');
 
-  } catch (err) { 
-    logger.error('Login error', { 
-      error: err.message, // Log only message for cleaner logs
-      stack: err.stack, 
-      email: req.body.email 
+  } catch (err) {
+    logger.error('Login process encountered an error', {
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      email: emailLower,
+      tenantSlug: tenantSlug,
     });
-    next(err); 
+    next(err);
   }
 });
-
-// ... (rest of the file remains the same)
 
 // ── POST /refresh ─────────────────────────────────────────────
 router.post('/refresh', validate(refreshSchema), async (req, res, next) => {
@@ -111,26 +135,30 @@ router.post('/refresh', validate(refreshSchema), async (req, res, next) => {
     catch (e) { return unauthorized(res, 'Invalid or expired refresh token'); }
 
     const user = await publicDb.queryOne(
-      `SELECT id, email, name, role, is_active, is_super_admin, refresh_token_hash FROM users WHERE id = $1`,
+      `SELECT id, email, name, role, is_active, is_super_admin, tenant_id, refresh_token_hash FROM users WHERE id = $1`,
       [decoded.userId]
     );
 
     if (!user || !user.is_active) return unauthorized(res, 'Account not found or inactive');
-
-    // Super Admin Refresh
-    if (decoded.type === 'super_admin' && user.is_super_admin) {
-      const newAccess = jwt.sign({ userId: user.id, email: user.email, role: 'admin', tenantSlug: 'admin', isSuperAdmin: true }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
-      return ok(res, { accessToken: newAccess, refreshToken, expiresIn: JWT_EXPIRES });
-    }
     
-    // Regular User Refresh
-    if (decoded.type === 'user' && !user.is_super_admin) {
-      if (user.refresh_token_hash !== refreshToken) return unauthorized(res, 'Refresh token revoked');
-      const newAccess = jwt.sign({ userId: user.id, email: user.email, role: user.role, tenantSlug: user.tenant_id }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
-      return ok(res, { accessToken: newAccess, refreshToken, expiresIn: JWT_EXPIRES });
-    }
+    // For this to work, tenant info is needed. Let's fetch it.
+    const tenant = await publicDb.queryOne(`SELECT slug FROM tenants WHERE id = $1`, [user.tenant_id]);
+    if (!tenant) return unauthorized(res, 'Associated tenant not found.');
 
-    return unauthorized(res, 'Invalid token type');
+    if (user.refresh_token_hash !== refreshToken) return unauthorized(res, 'Refresh token has been revoked');
+
+    const payload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      tenantId: user.tenant_id,
+      tenantSlug: tenant.slug,
+      isSuperAdmin: user.is_super_admin,
+    };
+    
+    const newAccessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+    return ok(res, { accessToken: newAccessToken, expiresIn: JWT_EXPIRES });
+
   } catch (err) { next(err); }
 });
 
@@ -149,17 +177,17 @@ router.get('/me', authenticate, async (req, res, next) => {
     if (!user) return unauthorized(res, 'User not found');
 
     let permissions = [];
-    if (user.is_super_admin) {
+    if (user.is_super_admin || user.role === 'admin') {
       permissions = ['*'];
     } else {
-      try { permissions = user.permissions ? (typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions) : []; } catch (e) {}
+      try { permissions = user.permissions ? JSON.parse(user.permissions) : []; } catch (e) {}
     }
 
     return ok(res, { 
       ...user, 
       permissions, 
       isSuperAdmin: user.is_super_admin,
-      tenantSlug: req.tenantSlug
+      tenantSlug: req.tenantSlug // from authenticate middleware
     });
   } catch (err) { next(err); }
 });
