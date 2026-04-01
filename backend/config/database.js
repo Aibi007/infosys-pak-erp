@@ -3,12 +3,8 @@ require('dotenv').config();
 const knex   = require('knex');
 const logger = require('../src/utils/logger');
 
-// ── Connection config ───────────────────────────────────────────
-
 const isProduction = process.env.NODE_ENV === 'production';
 
-// In production ( like on Railway), a direct connection string is used,
-// but with SSL enabled. For local development, the connection string is enough.
 const connection = {
   connectionString: process.env.DATABASE_URL,
   ...(isProduction && { ssl: { rejectUnauthorized: false } }),
@@ -34,41 +30,34 @@ const baseConfig = {
   debug: !isProduction,
 };
 
-
 function patchDb(k) {
 
   function extractRows(res) {
     if (res && res.rows) return res.rows;
-    if (Array.isArray(res)) return res[0] || [];
-    if (res && Array.isArray(res[0])) return res[0];
+    if (Array.isArray(res) && Array.isArray(res[0])) return res[0];
     return [];
   }
 
-  function normalizeSql(text, params) {
-    if (!params || params.length === 0) return { sql: text, bindings: [] };
-    let i = 0;
-    const sql = text.replace(/\?/g, () => `$${++i}`);
-    return { sql, bindings: params };
-  }
-
   k.query = async (text, params) => {
-    const { sql, bindings } = normalizeSql(text, params);
-    const res = await k.raw(sql, bindings);
+    const res = await k.raw(text, params || []);
     return extractRows(res);
   };
+
   k.queryOne = async (text, params) => {
-    const { sql, bindings } = normalizeSql(text, params);
-    const res = await k.raw(sql, bindings);
+    const res = await k.raw(text, params || []);
     const rows = extractRows(res);
     return rows[0];
   };
+
   k.queryAll = async (text, params) => {
     const res = await k.raw(text, params || []);
     return extractRows(res);
   };
+
   k.execute = async (text, params) => {
     return await k.raw(text, params || []);
   };
+
   k.paginate = async (sql, params, { page = 1, limit = 10 }) => {
     const offset = (page - 1) * limit;
     const countSql = `SELECT COUNT(*) AS count FROM (${sql}) AS count_query`;
@@ -76,24 +65,23 @@ function patchDb(k) {
 
     const [countRes, dataRes] = await Promise.all([
       k.raw(countSql, params || []),
-      k.raw(dataSql, params || [])
+      k.raw(dataSql,  params || [])
     ]);
 
-    const total = parseInt(countRes.rows[0].count, 10);
+    const total = parseInt(extractRows(countRes)[0].count, 10);
     return {
-      data: dataRes.rows,
+      data: extractRows(dataRes),
       pagination: {
         total, page: parseInt(page), limit: parseInt(limit),
         totalPages: Math.ceil(total / limit)
       }
     };
   };
+
   return k;
 }
 
 const db = patchDb(knex(baseConfig));
-
-const tenantConnections = new Map();
 
 function getTenantDb(tenantSlug) {
   if (!tenantSlug) throw new Error('Tenant slug required');
@@ -106,7 +94,6 @@ async function checkConnection() {
     logger.info('✅ Database connected successfully');
     return true;
   } catch (err) {
-    // Log the full error object for detailed diagnostics
     logger.error('❌ Database connection failed:', err);
     return false;
   }
@@ -114,7 +101,6 @@ async function checkConnection() {
 
 async function destroyConnections() {
   await db.destroy();
-  tenantConnections.clear();
   logger.info('Database connections closed');
 }
 
