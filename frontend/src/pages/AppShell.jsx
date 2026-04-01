@@ -286,7 +286,7 @@ function Products() {
               </tr></thead>
               <tbody>
                 {products.map(p=>(
-                  <tr key={p.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}}>
+                  <tr key={p.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
                     <td style={{padding:"10px 12px",color:C.muted,fontFamily:"monospace"}}>{p.sku}</td>
                     <td style={{padding:"10px 12px",color:C.text,fontWeight:"600"}}>{p.name}</td>
                     <td style={{padding:"10px 12px",color:C.muted}}>{p.category_name||"—"}</td>
@@ -340,7 +340,7 @@ function Customers() {
               </tr></thead>
               <tbody>
                 {customers.map(c=>(
-                  <tr key={c.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}}>
+                  <tr key={c.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
                     <td style={{padding:"10px 12px",color:C.text,fontWeight:"600"}}>{c.name}</td>
                     <td style={{padding:"10px 12px",color:C.muted}}>{c.phone||"—"}</td>
                     <td style={{padding:"10px 12px",color:C.muted}}>{c.city||"—"}</td>
@@ -390,7 +390,7 @@ function Invoices() {
               </tr></thead>
               <tbody>
                 {invoices.map(inv=>(
-                  <tr key={inv.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}}>
+                  <tr key={inv.id} style={{borderBottom:`1px solid ${C.border}`}} onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
                     <td style={{padding:"10px 12px",color:C.accent,fontWeight:"700"}}>{inv.invoice_number||inv.id?.slice(0,8)}</td>
                     <td style={{padding:"10px 12px",color:C.text}}>{inv.customer_name||"Walk-in"}</td>
                     <td style={{padding:"10px 12px",color:C.muted}}>{inv.created_at?.slice(0,10)||"—"}</td>
