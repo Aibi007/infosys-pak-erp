@@ -31,50 +31,50 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
   try {
     const emailLower = email.toLowerCase();
 
-    // 1. super_admins pehle check karo
-    const superAdmin = await publicDb.queryOne(
-      `SELECT id, email, password_hash, name, is_active FROM super_admins WHERE email = $1`,
-      [emailLower]
-    );
-
-    if (superAdmin) {
-      const passwordOk = await bcrypt.compare(password, superAdmin.password_hash);
-      if (!passwordOk) return unauthorized(res, 'Invalid email or password');
-      if (!superAdmin.is_active) return unauthorized(res, 'Account is deactivated');
-
-      const accessToken  = jwt.sign(
-        { userId: superAdmin.id, email: superAdmin.email, role: 'admin', tenantSlug: 'admin', isSuperAdmin: true },
-        JWT_SECRET, { expiresIn: JWT_EXPIRES }
-      );
-      const refreshToken = jwt.sign({ userId: superAdmin.id, type: 'super_admin' }, JWT_SECRET, { expiresIn: '30d' });
-      await publicDb.execute(`UPDATE super_admins SET last_login_at = NOW() WHERE id = $1`, [superAdmin.id]);
-
-      logger.info('Super admin logged in', { email: superAdmin.email });
-      return ok(res, {
-        accessToken, refreshToken, expiresIn: JWT_EXPIRES,
-        user: { id: superAdmin.id, email: superAdmin.email, name: superAdmin.name, role: 'admin', permissions: ['*'], isSuperAdmin: true },
-        tenant: { slug: 'admin', companyName: 'Infosys Pak ERP' },
-      }, 'Login successful');
-    }
-
-    // 2. Regular users
+    // 1. Fetch user from the single 'users' table
     const user = await publicDb.queryOne(
-      `SELECT id, email, password_hash, name, role, permissions, is_active, refresh_token_hash FROM users WHERE email = $1`,
+      `SELECT id, email, password_hash, name, role, permissions, is_active, is_super_admin, tenant_id FROM users WHERE email = $1`,
       [emailLower]
     );
 
     const dummyHash = '$2a$12$invalidhashinvalidhashinvalidhash';
     const passwordOk = await bcrypt.compare(password, user?.password_hash || dummyHash);
 
-    if (!user || !passwordOk) return unauthorized(res, 'Invalid email or password');
-    if (!user.is_active) return unauthorized(res, 'Account is deactivated');
+    if (!user || !passwordOk) {
+      return unauthorized(res, 'Invalid email or password');
+    }
 
+    if (!user.is_active) {
+      return unauthorized(res, 'Account is deactivated');
+    }
+
+    // 2. Handle Super Admin Login
+    if (user.is_super_admin) {
+      const accessToken  = jwt.sign(
+        { userId: user.id, email: user.email, role: 'admin', tenantSlug: 'admin', isSuperAdmin: true },
+        JWT_SECRET, { expiresIn: JWT_EXPIRES }
+      );
+      const refreshToken = jwt.sign({ userId: user.id, type: 'super_admin' }, JWT_SECRET, { expiresIn: '30d' });
+      
+      await publicDb.execute(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [user.id]);
+
+      logger.info('Super admin logged in', { email: user.email });
+      return ok(res, {
+        accessToken, refreshToken, expiresIn: JWT_EXPIRES,
+        user: { id: user.id, email: user.email, name: user.name, role: 'admin', permissions: ['*'], isSuperAdmin: true },
+        tenant: { slug: 'admin', companyName: 'Infosys Pak ERP' },
+      }, 'Login successful');
+    }
+
+    // 3. Handle Regular User Login
     let permissions = [];
-    try { permissions = user.permissions ? (typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions) : []; } catch (e) {}
+    try { 
+      permissions = user.permissions ? (typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions) : []; 
+    } catch (e) {}
     if (user.role === 'admin') permissions = ['*'];
 
     const accessToken  = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role, tenantSlug: 'default' },
+      { userId: user.id, email: user.email, role: user.role, tenantSlug: user.tenant_id },
       JWT_SECRET, { expiresIn: JWT_EXPIRES }
     );
     const refreshToken = jwt.sign({ userId: user.id, type: 'user' }, JWT_SECRET, { expiresIn: '30d' });
@@ -83,22 +83,24 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
       [refreshToken, user.id]
     );
 
-    logger.info('User logged in', { userId: user.id, email: user.email });
+    logger.info('User logged in', { userId: user.id, email: user.email, tenant: user.tenant_id });
     return ok(res, {
       accessToken, refreshToken, expiresIn: JWT_EXPIRES,
       user: { id: user.id, email: user.email, name: user.name, role: user.role, permissions, isSuperAdmin: false },
-      tenant: { slug: 'default', companyName: 'Infosys Pak ERP' },
+      tenant: { slug: user.tenant_id, companyName: 'Infosys Pak ERP' }, // Assuming tenant info is fetched elsewhere
     }, 'Login successful');
 
   } catch (err) { 
     logger.error('Login error', { 
-      error: err, 
+      error: err.message, // Log only message for cleaner logs
       stack: err.stack, 
       email: req.body.email 
     });
     next(err); 
   }
 });
+
+// ... (rest of the file remains the same)
 
 // ── POST /refresh ─────────────────────────────────────────────
 router.post('/refresh', validate(refreshSchema), async (req, res, next) => {
@@ -108,30 +110,34 @@ router.post('/refresh', validate(refreshSchema), async (req, res, next) => {
     try { decoded = jwt.verify(refreshToken, JWT_SECRET); }
     catch (e) { return unauthorized(res, 'Invalid or expired refresh token'); }
 
-    if (decoded.type === 'super_admin') {
-      const sa = await publicDb.queryOne(`SELECT id, email, name, is_active FROM super_admins WHERE id = $1`, [decoded.userId]);
-      if (!sa || !sa.is_active) return unauthorized(res, 'Account not found');
-      const newAccess = jwt.sign({ userId: sa.id, email: sa.email, role: 'admin', tenantSlug: 'admin', isSuperAdmin: true }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+    const user = await publicDb.queryOne(
+      `SELECT id, email, name, role, is_active, is_super_admin, refresh_token_hash FROM users WHERE id = $1`,
+      [decoded.userId]
+    );
+
+    if (!user || !user.is_active) return unauthorized(res, 'Account not found or inactive');
+
+    // Super Admin Refresh
+    if (decoded.type === 'super_admin' && user.is_super_admin) {
+      const newAccess = jwt.sign({ userId: user.id, email: user.email, role: 'admin', tenantSlug: 'admin', isSuperAdmin: true }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+      return ok(res, { accessToken: newAccess, refreshToken, expiresIn: JWT_EXPIRES });
+    }
+    
+    // Regular User Refresh
+    if (decoded.type === 'user' && !user.is_super_admin) {
+      if (user.refresh_token_hash !== refreshToken) return unauthorized(res, 'Refresh token revoked');
+      const newAccess = jwt.sign({ userId: user.id, email: user.email, role: user.role, tenantSlug: user.tenant_id }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
       return ok(res, { accessToken: newAccess, refreshToken, expiresIn: JWT_EXPIRES });
     }
 
-    const user = await publicDb.queryOne(
-      `SELECT id, email, role, is_active, refresh_token_hash FROM users WHERE id = $1`, [decoded.userId]
-    );
-    if (!user || !user.is_active) return unauthorized(res, 'User not found');
-    if (user.refresh_token_hash !== refreshToken) return unauthorized(res, 'Refresh token revoked');
-
-    const newAccess = jwt.sign({ userId: user.id, email: user.email, role: user.role, tenantSlug: 'default' }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
-    return ok(res, { accessToken: newAccess, refreshToken, expiresIn: JWT_EXPIRES });
+    return unauthorized(res, 'Invalid token type');
   } catch (err) { next(err); }
 });
 
 // ── POST /logout ──────────────────────────────────────────────
 router.post('/logout', authenticate, async (req, res, next) => {
   try {
-    if (!req.isSuperAdmin) {
-      await publicDb.execute(`UPDATE users SET refresh_token_hash = NULL WHERE id = $1`, [req.userId]);
-    }
+    await publicDb.execute(`UPDATE users SET refresh_token_hash = NULL WHERE id = $1`, [req.userId]);
     return ok(res, null, 'Logged out successfully');
   } catch (err) { next(err); }
 });
@@ -139,16 +145,22 @@ router.post('/logout', authenticate, async (req, res, next) => {
 // ── GET /me ───────────────────────────────────────────────────
 router.get('/me', authenticate, async (req, res, next) => {
   try {
-    if (req.isSuperAdmin) {
-      const sa = await publicDb.queryOne(`SELECT id, email, name FROM super_admins WHERE id = $1`, [req.userId]);
-      if (!sa) return unauthorized(res, 'User not found');
-      return ok(res, { id: sa.id, email: sa.email, name: sa.name, role: 'admin', permissions: ['*'], isSuperAdmin: true });
-    }
-    const user = await publicDb.queryOne(`SELECT id, email, name, role, permissions, last_login_at FROM users WHERE id = $1`, [req.userId]);
+    const user = await publicDb.queryOne(`SELECT id, email, name, role, permissions, last_login_at, is_super_admin FROM users WHERE id = $1`, [req.userId]);
     if (!user) return unauthorized(res, 'User not found');
+
     let permissions = [];
-    try { permissions = user.permissions ? (typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions) : []; } catch (e) {}
-    return ok(res, { ...user, permissions, tenantSlug: req.tenantSlug || 'default' });
+    if (user.is_super_admin) {
+      permissions = ['*'];
+    } else {
+      try { permissions = user.permissions ? (typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions) : []; } catch (e) {}
+    }
+
+    return ok(res, { 
+      ...user, 
+      permissions, 
+      isSuperAdmin: user.is_super_admin,
+      tenantSlug: req.tenantSlug
+    });
   } catch (err) { next(err); }
 });
 
@@ -156,12 +168,10 @@ router.get('/me', authenticate, async (req, res, next) => {
 router.post('/change-password', authenticate, validate(changePasswordSchema), async (req, res, next) => {
   const { currentPassword, newPassword } = req.body;
   try {
-    const table = req.isSuperAdmin ? 'super_admins' : 'users';
-    const user  = await publicDb.queryOne(`SELECT id, password_hash FROM ${table} WHERE id = $1`, [req.userId]);
+    const user = await publicDb.queryOne(`SELECT id, password_hash FROM users WHERE id = $1`, [req.userId]);
     if (!await bcrypt.compare(currentPassword, user.password_hash)) return badRequest(res, 'Current password is incorrect');
     const newHash = await bcrypt.hash(newPassword, 12);
-    await publicDb.execute(`UPDATE ${table} SET password_hash = $1, updated_at = NOW() WHERE id = $2`, [newHash, req.userId]);
-    if (!req.isSuperAdmin) await publicDb.execute(`UPDATE users SET refresh_token_hash = NULL WHERE id = $1`, [req.userId]);
+    await publicDb.execute(`UPDATE users SET password_hash = $1, updated_at = NOW(), refresh_token_hash = NULL WHERE id = $2`, [newHash, req.userId]);
     return ok(res, null, 'Password changed. Please log in again.');
   } catch (err) { next(err); }
 });
