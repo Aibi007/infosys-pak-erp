@@ -173,7 +173,7 @@ async function setupDatabase() {
       logger.info(`[BOOT] Super admin password updated: ${adminEmail}`);
     } else {
       await db.raw(
-        "INSERT INTO users (email, password_hash, full_name, is_active, is_super_admin, tenant_id) VALUES (?, ?, 'Super Admin', TRUE, TRUE, NULL)",
+        "INSERT INTO users (email, password_hash, name, is_active, is_super_admin, tenant_id) VALUES (?, ?, 'Super Admin', TRUE, TRUE, NULL)",
         [adminEmail, hash]
       );
       logger.info(`[BOOT] Super admin created: ${adminEmail}`);
