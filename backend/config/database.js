@@ -7,7 +7,7 @@ const logger = require('../src/utils/logger');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// In production (like on Railway), a direct connection string is used,
+// In production ( like on Railway), a direct connection string is used,
 // but with SSL enabled. For local development, the connection string is enough.
 const connection = {
   connectionString: process.env.DATABASE_URL,
