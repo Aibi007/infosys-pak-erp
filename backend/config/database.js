@@ -37,17 +37,34 @@ const baseConfig = {
 
 function patchDb(k) {
 
+  function extractRows(res) {
+    if (res && res.rows) return res.rows;
+    if (Array.isArray(res)) return res[0] || [];
+    if (res && Array.isArray(res[0])) return res[0];
+    return [];
+  }
+
+  function normalizeSql(text, params) {
+    if (!params || params.length === 0) return { sql: text, bindings: [] };
+    let i = 0;
+    const sql = text.replace(/\?/g, () => `$${++i}`);
+    return { sql, bindings: params };
+  }
+
   k.query = async (text, params) => {
-    const res = await k.raw(text, params || []);
-    return res.rows;
+    const { sql, bindings } = normalizeSql(text, params);
+    const res = await k.raw(sql, bindings);
+    return extractRows(res);
   };
   k.queryOne = async (text, params) => {
-    const res = await k.raw(text, params || []);
-    return res.rows[0];
+    const { sql, bindings } = normalizeSql(text, params);
+    const res = await k.raw(sql, bindings);
+    const rows = extractRows(res);
+    return rows[0];
   };
   k.queryAll = async (text, params) => {
     const res = await k.raw(text, params || []);
-    return res.rows;
+    return extractRows(res);
   };
   k.execute = async (text, params) => {
     return await k.raw(text, params || []);
