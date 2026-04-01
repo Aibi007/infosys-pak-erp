@@ -163,12 +163,13 @@ async function setupDatabase() {
     const hash = await bcrypt.hash(adminPass, BCRYPT_ROUNDS);
 
     const adminResult = await db.raw('SELECT id FROM users WHERE email = ? AND is_super_admin = TRUE', [adminEmail]);
-    const adminExists = adminResult[0] && adminResult[0].length > 0;
+    const adminExists = adminResult.rows && adminResult.rows.length > 0;
 
     if (adminExists) {
+      const adminId = adminResult.rows[0].id;
       await db.raw(
         'UPDATE users SET password_hash = ?, is_active = TRUE WHERE id = ?',
-        [hash, adminResult[0][0].id]
+        [hash, adminId]
       );
       logger.info(`[BOOT] Super admin password updated: ${adminEmail}`);
     } else {
