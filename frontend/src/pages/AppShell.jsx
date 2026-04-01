@@ -247,7 +247,7 @@ function Dashboard({navigate}) {
               {labels.map((l,i)=>(
                 <div key={l} onClick={()=>navigate(ids[i])} style={{padding:"8px 10px",borderRadius:"6px",marginBottom:"4px",cursor:"pointer",color:C.muted,fontSize:"12px",display:"flex",alignItems:"center",gap:"8px"}}
                   onMouseOver={e=>e.currentTarget.style.background=C.muted2} onMouseOut={e=>e.currentTarget.style.background="transparent"}}>
-                  → {l}
+                  {l}
                 </div>
               ))}
             </div>
